@@ -1,23 +1,24 @@
 package redismodule
 
 import (
+	"context"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"github.com/redis/go-redis/v9"
 )
 
+var client *redisClient
+
 type RedisModule struct {
-	RedisConfig       RedisConfig
+	RedisConfig *redis.UniversalOptions
+
 	RedisModuleConfig *declaration.ModuleConfig
 	RedisInterceptor  *func(instance interface{})
 }
 
-// RedisConfig 加载优先级依次向下递减
-type RedisConfig struct {
-	Cluster    *redis.ClusterOptions
-	Standalone *redis.Options
-}
-
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
+	if r.RedisModuleConfig != nil {
+		return r.RedisModuleConfig
+	}
 	return &declaration.ModuleConfig{
 		ModuleName:               "Redis",
 		UnregisterAllowAsync:     true,
@@ -27,8 +28,11 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 }
 
 func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
-	if r.RedisConfig.Cluster != nil {
-		redis.NewClusterClient(r.RedisConfig.Cluster)
+	c := redis.NewUniversalClient(r.RedisConfig)
+	status := c.Ping(context.Background())
+	err := status.Err()
+	if err != nil {
+		return err
 	}
 	return nil
 }
