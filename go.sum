@@ -21,6 +21,8 @@ github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999 h1:Rax
 github.com/golang-acexy/starter-parent v0.0.0-20230806033120-3ce8a7e7c999/go.mod h1:mvSSgR3wQdtdhqIupIS90ezB4xU0XFhkAPtsZoss618=
 github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f h1:U6r+4y0VoVTYRBpGHjhMwyKUcU39AvJH+rm/IjrU7xg=
 github.com/golang-acexy/starter-parent v0.0.0-20230807022015-d57d84c3535f/go.mod h1:RNUB3kvUmmj9bE8jy/LzJs3U9N418/HorWSZGCvz/uQ=
+github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d h1:F5yNDqfU5p9KrqVrNDP4vn96ZYmSyEsGCRewYbGrtYU=
+github.com/golang-acexy/starter-parent v0.0.0-20230807103042-9893e7ce457d/go.mod h1:Ywdd6zS6YMaS4pfHLbAqzCXWj+s+2fRrlwjJNeGiBC4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/redis/go-redis/v9 v9.0.5 h1:CuQcn5HIEeK7BgElubPP8CGtE0KakrnbBSTLjathl5o=
