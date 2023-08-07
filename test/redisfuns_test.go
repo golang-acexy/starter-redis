@@ -47,9 +47,7 @@ func TestSet(t *testing.T) {
 
 	//value := []string{"1", "2"}
 
-	value := redismodule.EncodeDataWrapper{
-		Value: User{Name: "张三"},
-	}
+	value := User{Name: "张三"}
 
 	err := redismodule.SetAnyWithJson(context.Background(), "key", value)
 	if err != nil {
@@ -65,21 +63,41 @@ func TestSet(t *testing.T) {
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
+
+	err = redismodule.MSet(context.Background(), map[redismodule.RedisKey]string{"mkey1": "1", "mkey2": "2"})
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+	}
 }
 
 func TestGet(t *testing.T) {
 
-	fmt.Println(redismodule.GetString(context.Background(), "key2"))
+	fmt.Println(redismodule.Get(context.Background(), "key2"))
 
 	var user User // error
 	fmt.Println(redismodule.GetAny(context.Background(), "key", &user))
 	fmt.Printf("%+v\n", user)
 
 	fmt.Println(redismodule.GetAnyWithJson(context.Background(), "key", &user))
-	fmt.Printf("%+v", user)
+	fmt.Printf("%+v\n", user)
 
 	var floatV float64
 	fmt.Println(redismodule.GetAny(context.Background(), "key1", &floatV))
-	fmt.Printf("%v", floatV)
+	fmt.Printf("%v\n", floatV)
+
+	fmt.Println(redismodule.MGet(context.Background(), "mkey1", "mkey2"))
+
+	type Strings struct {
+		Value1 string `redis:"mkey1"`
+		Value2 string `redis:"mkey2"`
+	}
+
+	var strings Strings
+	fmt.Println(redismodule.MGetAny(context.Background(), &strings, "mkey1", "mkey2"))
+	fmt.Printf("%+v\n", strings)
+
+}
+
+func TestClient(t *testing.T) {
 
 }
