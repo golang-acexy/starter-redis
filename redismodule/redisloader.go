@@ -3,12 +3,14 @@ package redismodule
 import (
 	"context"
 	"fmt"
+	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
 
 var redisClient redis.UniversalClient
+var redisLockerClient *redislock.Client
 
 type RedisModule struct {
 	RedisConfig *redis.UniversalOptions
@@ -24,7 +26,7 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 	return &declaration.ModuleConfig{
 		ModuleName:               "Redis",
 		UnregisterAllowAsync:     true,
-		UnregisterMaxWaitSeconds: 15,
+		UnregisterMaxWaitSeconds: 10,
 		UnregisterPriority:       19,
 	}
 }
@@ -37,6 +39,7 @@ func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
 		return err
 	}
 	redisClient = c
+	redisLockerClient = redislock.New(redisClient)
 	return nil
 }
 
