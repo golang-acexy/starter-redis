@@ -1,16 +1,22 @@
 package test
 
 import (
+	"context"
+	"fmt"
+	"github.com/acexy/golang-toolkit/math/random"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"github.com/golang-acexy/starter-redis/redismodule"
 	"github.com/redis/go-redis/v9"
 	"testing"
+	"time"
 )
 
 var moduleLoaders []declaration.ModuleLoader
 var rModule *redismodule.RedisModule
 
-func init() {
+// 单实例Redis
+func TestStandalone(t *testing.T) {
+
 	rModule = &redismodule.RedisModule{
 		RedisConfig: &redis.UniversalOptions{
 			Addrs:    []string{":6379"},
@@ -18,10 +24,28 @@ func init() {
 		},
 	}
 	moduleLoaders = []declaration.ModuleLoader{rModule}
-}
 
-func TestLoad(t *testing.T) {
 	m := declaration.Module{ModuleLoaders: moduleLoaders}
-	m.Load()
-	select {}
+
+	err := m.Load()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+	}
+
+	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
+	go func() {
+		for i := 1; i <= 10; i++ {
+			go func() {
+				for {
+					err := redismodule.Set(context.Background(), redismodule.RedisKey(random.RandString(5)), random.RandString(5))
+					if err != nil {
+						fmt.Printf("%+v", err)
+					}
+				}
+			}()
+		}
+	}()
+
+	time.Sleep(time.Second * 3)
+	fmt.Println(rModule.Unregister(10))
 }

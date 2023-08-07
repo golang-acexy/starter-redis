@@ -2,11 +2,13 @@ package redismodule
 
 import (
 	"context"
+	"fmt"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
-var client *redisClient
+var redisClient redis.UniversalClient
 
 type RedisModule struct {
 	RedisConfig *redis.UniversalOptions
@@ -34,6 +36,7 @@ func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
 	if err != nil {
 		return err
 	}
+	redisClient = c
 	return nil
 }
 
@@ -45,5 +48,29 @@ func (r *RedisModule) Interceptor() *func(instance interface{}) {
 }
 
 func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
-	return true, nil
+	err = redisClient.Close()
+	if err != nil {
+		return
+	}
+	done := make(chan bool)
+
+	go func() {
+		for {
+			stats := redisClient.PoolStats()
+			fmt.Printf("%+v\n", stats)
+			if stats.IdleConns == 0 && stats.TotalConns == 0 {
+				done <- true
+				return
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-done:
+		gracefully = true
+	case <-time.After(time.Second * time.Duration(maxWaitSeconds)):
+		gracefully = false
+	}
+	return
 }
