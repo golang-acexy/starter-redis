@@ -40,9 +40,13 @@ func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
 	}
 	redisClient = c
 	redisLockerClient = redislock.New(redisClient)
+	if interceptor != nil {
+		(*interceptor)(redisClient)
+	}
 	return nil
 }
 
+// Interceptor instance redis.UniversalClient
 func (r *RedisModule) Interceptor() *func(instance interface{}) {
 	if r.RedisInterceptor != nil {
 		return r.RedisInterceptor
