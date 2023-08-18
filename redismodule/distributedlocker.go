@@ -14,16 +14,16 @@ func RawLockClient() *redislock.Client {
 }
 
 func lock(ctx context.Context, key string, ttl time.Duration, executable func(), retry redislock.RetryStrategy) error {
-	lock, err := redisLockerClient.Obtain(ctx, key, ttl, &redislock.Options{
+	redisLock, err := redisLockerClient.Obtain(ctx, key, ttl, &redislock.Options{
 		RetryStrategy: retry,
 	})
 	if err != nil {
 		return err
 	}
 	defer func() {
-		err := lock.Release(context.Background())
+		err := redisLock.Release(context.Background())
 		if err != nil {
-			log.Logrus().WithError(err).Errorln("release lock error key =", key)
+			log.Logrus().WithError(err).Errorln("release redisLock error key =", key)
 		}
 	}()
 	executable()
@@ -38,14 +38,14 @@ func TryLock(key string, lockTtl time.Duration, executable func()) error {
 
 // TryLockWithContext 取锁并执行executable函数
 func TryLockWithContext(ctx context.Context, key string, lockTtl time.Duration, executable func()) error {
-	lock, err := redisLockerClient.Obtain(ctx, key, lockTtl, nil)
+	redisLock, err := redisLockerClient.Obtain(ctx, key, lockTtl, nil)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		err := lock.Release(context.Background())
+		err := redisLock.Release(context.Background())
 		if err != nil {
-			log.Logrus().WithError(err).Errorln("release lock error key =", key)
+			log.Logrus().WithError(err).Errorln("release redisLock error key =", key)
 		}
 	}()
 	executable()
