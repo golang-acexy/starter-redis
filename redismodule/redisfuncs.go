@@ -8,11 +8,6 @@ import (
 	"time"
 )
 
-// RawClient 获取原始RedisClient进行操作
-func RawClient() redis.UniversalClient {
-	return redisClient
-}
-
 func convertKeyType(keys ...RedisKey) []string {
 	k := make([]string, len(keys))
 	for i, v := range keys {
