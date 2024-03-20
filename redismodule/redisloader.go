@@ -3,7 +3,7 @@ package redismodule
 import (
 	"context"
 	"fmt"
-	"github.com/acexy/golang-toolkit/log"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
 	"github.com/redis/go-redis/v9"
@@ -44,7 +44,7 @@ func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
 	if interceptor != nil {
 		(*interceptor)(redisClient)
 	}
-	log.Logrus().Traceln(r.ModuleConfig().ModuleName, "started")
+	logger.Logrus().Traceln(r.ModuleConfig().ModuleName, "started")
 	return nil
 }
 

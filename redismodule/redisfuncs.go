@@ -3,7 +3,7 @@ package redismodule
 import (
 	"context"
 	"errors"
-	"github.com/acexy/golang-toolkit/util"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -113,7 +113,7 @@ func SetAny(ctx context.Context, key RedisKey, value interface{}, expiration ...
 // SetAnyWithJson 设置其他类型值
 // 设置任何类型，将被以json格式进行编码存储
 func SetAnyWithJson(ctx context.Context, key RedisKey, value any, expiration ...time.Duration) error {
-	bytes, err := util.ToJsonBytesError(value)
+	bytes, err := json.ToJsonBytesError(value)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func GetAnyWithJson(ctx context.Context, key RedisKey, object any) error {
 	if err != nil {
 		return err
 	}
-	return util.ParseJsonError(string(bytes), object)
+	return json.ParseJsonError(string(bytes), object)
 }
 
 func MGetAny(ctx context.Context, object any, keys ...RedisKey) error {
