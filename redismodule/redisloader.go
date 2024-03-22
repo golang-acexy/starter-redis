@@ -17,7 +17,7 @@ type RedisModule struct {
 	RedisConfig *redis.UniversalOptions
 
 	RedisModuleConfig *declaration.ModuleConfig
-	RedisInterceptor  *func(instance interface{})
+	RedisInterceptor  func(instance interface{})
 }
 
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
@@ -29,31 +29,25 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterAllowAsync:     true,
 		UnregisterMaxWaitSeconds: 10,
 		UnregisterPriority:       19,
+		LoadInterceptor:          r.RedisInterceptor,
 	}
 }
 
-func (r *RedisModule) Register(interceptor *func(instance interface{})) error {
-	c := redis.NewUniversalClient(r.RedisConfig)
-	status := c.Ping(context.Background())
+func (r *RedisModule) Register() error {
+	status := redisClient.Ping(context.Background())
 	err := status.Err()
 	if err != nil {
 		return err
 	}
-	redisClient = c
 	redisLockerClient = redislock.New(redisClient)
-	if interceptor != nil {
-		(*interceptor)(redisClient)
-	}
 	logger.Logrus().Traceln(r.ModuleConfig().ModuleName, "started")
 	return nil
 }
 
-// Interceptor instance redis.UniversalClient
-func (r *RedisModule) Interceptor() *func(instance interface{}) {
-	if r.RedisInterceptor != nil {
-		return r.RedisInterceptor
-	}
-	return nil
+func (r *RedisModule) RawInstance() interface{} {
+	c := redis.NewUniversalClient(r.RedisConfig)
+	redisClient = c
+	return c
 }
 
 func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {
@@ -62,7 +56,6 @@ func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err erro
 		return
 	}
 	done := make(chan bool)
-
 	go func() {
 		for {
 			stats := redisClient.PoolStats()
@@ -74,7 +67,6 @@ func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err erro
 			time.Sleep(500 * time.Millisecond)
 		}
 	}()
-
 	select {
 	case <-done:
 		gracefully = true

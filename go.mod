@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/acexy/golang-toolkit v0.0.4
 	github.com/bsm/redislock v0.9.4
-	github.com/golang-acexy/starter-parent v0.0.3
+	github.com/golang-acexy/starter-parent v0.0.4-0.20240322093122-5503d09890fe
 	github.com/redis/go-redis/v9 v9.5.1
 )
 

@@ -13,6 +13,8 @@ type User struct {
 	Name string
 }
 
+var m declaration.Module
+
 func init() {
 	rModule = &redismodule.RedisModule{
 		RedisConfig: &redis.UniversalOptions{
@@ -21,7 +23,7 @@ func init() {
 		},
 	}
 	moduleLoaders = []declaration.ModuleLoader{rModule}
-	m := declaration.Module{ModuleLoaders: moduleLoaders}
+	m = declaration.Module{ModuleLoaders: moduleLoaders}
 
 	err := m.Load()
 	if err != nil {
@@ -68,6 +70,7 @@ func TestSet(t *testing.T) {
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
+	fmt.Println(m.UnloadByConfig())
 }
 
 func TestGet(t *testing.T) {
@@ -95,7 +98,7 @@ func TestGet(t *testing.T) {
 	var strings Strings
 	fmt.Println(redismodule.MGetAny(context.Background(), &strings, "mkey1", "mkey2"))
 	fmt.Printf("%+v\n", strings)
-
+	fmt.Println(m.Unload(2))
 }
 
 func TestClient(t *testing.T) {
