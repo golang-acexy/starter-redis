@@ -14,10 +14,11 @@ var redisClient redis.UniversalClient
 var redisLockerClient *redislock.Client
 
 type RedisModule struct {
-	RedisConfig *redis.UniversalOptions
-
+	RedisConfig       *redis.UniversalOptions
 	RedisModuleConfig *declaration.ModuleConfig
-	RedisInterceptor  func(instance interface{})
+
+	// instance *redis.Client
+	RedisInterceptor func(instance interface{})
 }
 
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
@@ -33,21 +34,16 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 	}
 }
 
-func (r *RedisModule) Register() error {
+func (r *RedisModule) Register() (interface{}, error) {
+	redisClient = redis.NewUniversalClient(r.RedisConfig)
 	status := redisClient.Ping(context.Background())
 	err := status.Err()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	redisLockerClient = redislock.New(redisClient)
 	logger.Logrus().Traceln(r.ModuleConfig().ModuleName, "started")
-	return nil
-}
-
-func (r *RedisModule) RawInstance() interface{} {
-	c := redis.NewUniversalClient(r.RedisConfig)
-	redisClient = c
-	return c
+	return redisClient, nil
 }
 
 func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err error) {

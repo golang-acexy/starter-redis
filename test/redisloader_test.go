@@ -22,10 +22,14 @@ func TestStandalone(t *testing.T) {
 			Addrs:    []string{":6379"},
 			Password: "tech-acexy",
 		},
+		RedisInterceptor: func(instance interface{}) {
+			c := instance.(*redis.Client)
+			fmt.Println(c.String())
+		},
 	}
 	moduleLoaders = []declaration.ModuleLoader{rModule}
 
-	m := declaration.Module{ModuleLoaders: moduleLoaders}
+	m = declaration.Module{ModuleLoaders: moduleLoaders}
 
 	err := m.Load()
 	if err != nil {
@@ -37,7 +41,7 @@ func TestStandalone(t *testing.T) {
 		for i := 1; i <= 10; i++ {
 			go func() {
 				for {
-					err := redismodule.Set(context.Background(), redismodule.RedisKey(random.RandString(5)), random.RandString(5))
+					err = redismodule.Set(context.Background(), redismodule.RedisKey(random.RandString(5)), random.RandString(5))
 					if err != nil {
 						fmt.Printf("%+v", err)
 					}
