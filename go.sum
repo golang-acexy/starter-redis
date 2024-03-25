@@ -17,6 +17,8 @@ github.com/golang-acexy/starter-parent v0.0.4-0.20240322093122-5503d09890fe h1:T
 github.com/golang-acexy/starter-parent v0.0.4-0.20240322093122-5503d09890fe/go.mod h1:Ol9Gt1uRVVi1fSemTh0xeuZFcfIU+VATmPSm28ilnNk=
 github.com/golang-acexy/starter-parent v0.0.4 h1:BNqp4ig2XOYt7C3B3ldq4r4gmfV3wWLibMqWRmpSerA=
 github.com/golang-acexy/starter-parent v0.0.4/go.mod h1:Ol9Gt1uRVVi1fSemTh0xeuZFcfIU+VATmPSm28ilnNk=
+github.com/golang-acexy/starter-parent v0.0.5 h1:WFmb3sP0yVNt44ICoDd84QeGQa9J0awKa6IareHupQM=
+github.com/golang-acexy/starter-parent v0.0.5/go.mod h1:Ol9Gt1uRVVi1fSemTh0xeuZFcfIU+VATmPSm28ilnNk=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/redis/go-redis/v9 v9.3.0 h1:RiVDjmig62jIWp7Kk4XVLs0hzV6pI3PyTnnL0cnn0u0=
