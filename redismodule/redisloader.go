@@ -17,8 +17,7 @@ type RedisModule struct {
 	RedisConfig       *redis.UniversalOptions
 	RedisModuleConfig *declaration.ModuleConfig
 
-	// instance *redis.Client
-	RedisInterceptor func(instance interface{})
+	RedisInterceptor func(instance redis.UniversalClient)
 }
 
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
@@ -30,7 +29,11 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 		UnregisterAllowAsync:     true,
 		UnregisterMaxWaitSeconds: 10,
 		UnregisterPriority:       19,
-		LoadInterceptor:          r.RedisInterceptor,
+		LoadInterceptor: func(instance interface{}) {
+			if r.RedisInterceptor != nil {
+				r.RedisInterceptor(instance.(redis.UniversalClient))
+			}
+		},
 	}
 }
 
