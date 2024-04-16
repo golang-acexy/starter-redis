@@ -14,10 +14,11 @@ var redisClient redis.UniversalClient
 var redisLockerClient *redislock.Client
 
 type RedisModule struct {
-	RedisConfig       *redis.UniversalOptions
-	RedisModuleConfig *declaration.ModuleConfig
+	RedisConfig     redis.UniversalOptions
+	LazyRedisConfig func() redis.UniversalOptions
 
-	RedisInterceptor func(instance redis.UniversalClient)
+	RedisModuleConfig *declaration.ModuleConfig
+	RedisInterceptor  func(instance redis.UniversalClient)
 }
 
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
@@ -38,7 +39,10 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 }
 
 func (r *RedisModule) Register() (interface{}, error) {
-	redisClient = redis.NewUniversalClient(r.RedisConfig)
+	if r.LazyRedisConfig != nil {
+		r.RedisConfig = r.LazyRedisConfig()
+	}
+	redisClient = redis.NewUniversalClient(&r.RedisConfig)
 	status := redisClient.Ping(context.Background())
 	err := status.Err()
 	if err != nil {

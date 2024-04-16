@@ -17,7 +17,7 @@ var m declaration.Module
 
 func init() {
 	rModule = &redismodule.RedisModule{
-		RedisConfig: &redis.UniversalOptions{
+		RedisConfig: redis.UniversalOptions{
 			Addrs:    []string{":6379"},
 			Password: "tech-acexy",
 		},
