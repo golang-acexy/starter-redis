@@ -3,6 +3,7 @@ package redismodule
 import (
 	"context"
 	"errors"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -113,4 +114,25 @@ func (*cmdHash) HGetAll(ctx context.Context, key RedisKey, keyAppend ...interfac
 		return nil, err
 	}
 	return cmd.Result()
+}
+
+// HSetAnyWithJson 设置Hash类型的值 json格式序列化
+func (*cmdHash) HSetAnyWithJson(ctx context.Context, key RedisKey, name string, value interface{}, keyAppend ...interface{}) error {
+	return hSet(ctx, key, []interface{}{name, json.ToJsonBytes(value)}, keyAppend...)
+}
+
+// HGetAnyWithJson 获取Hash类型的值 json格式反序列化
+func (*cmdHash) HGetAnyWithJson(ctx context.Context, key RedisKey, name string, value any, keyAppend ...interface{}) error {
+	cmd := hGet(ctx, key, name, keyAppend...)
+	if cmd.Err() != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil // wrap nil error
+		}
+		return cmd.Err()
+	}
+	bytes, err := cmd.Bytes()
+	if err != nil {
+		return err
+	}
+	return json.ParseBytesError(bytes, value)
 }

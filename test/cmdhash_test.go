@@ -46,3 +46,20 @@ func TestHGetAll(t *testing.T) {
 	}
 	fmt.Println(hashType.HGetAll(context.Background(), key))
 }
+
+func TestHSetJson(t *testing.T) {
+	hashType := redismodule.HashCmd()
+	key := redismodule.RedisKey{
+		KeyFormat: "key-json-hash",
+	}
+
+	u := User{Name: "王五"}
+	err := hashType.HSetAnyWithJson(context.Background(), key, "u1", u)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	var u1 User
+	fmt.Println(hashType.HGetAnyWithJson(context.Background(), key, "u1", &u1))
+	fmt.Printf("%+v\n", u1)
+}

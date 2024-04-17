@@ -278,5 +278,5 @@ func (t *cmdString) GetAnyWithJson(ctx context.Context, key RedisKey, value any,
 	if err != nil {
 		return err
 	}
-	return json.ParseJsonError(string(bytes), value)
+	return json.ParseBytesError(bytes, value)
 }

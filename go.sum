@@ -1,5 +1,5 @@
-github.com/acexy/golang-toolkit v0.0.5 h1:zgyoRGCIq+IdNBo4g0wB/kzAjI/4LyNFKdz9zAjxKCE=
-github.com/acexy/golang-toolkit v0.0.5/go.mod h1:Gg9CQCGN9noTf3zrwmGnO+0A0ZdOyVzF2LDhwoSvsLw=
+github.com/acexy/golang-toolkit v0.0.6 h1:Fr3NdJyS82NuvPdpTj0fCUvMasOFFIsL4silX/pjspg=
+github.com/acexy/golang-toolkit v0.0.6/go.mod h1:Gg9CQCGN9noTf3zrwmGnO+0A0ZdOyVzF2LDhwoSvsLw=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=
 github.com/bsm/redislock v0.9.4 h1:X/Wse1DPpiQgHbVYRE9zv6m070UcKoOGekgvpNhiSvw=
