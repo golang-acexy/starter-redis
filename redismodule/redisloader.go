@@ -13,6 +13,13 @@ import (
 var redisClient redis.UniversalClient
 var redisLockerClient *redislock.Client
 
+type RedisKey struct {
+
+	// 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
+	KeyFormat string
+	Expire    time.Duration
+}
+
 type RedisModule struct {
 	RedisConfig     redis.UniversalOptions
 	LazyRedisConfig func() redis.UniversalOptions
