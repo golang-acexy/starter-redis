@@ -26,7 +26,6 @@ func init() {
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
-
 }
 
 func TestSet(t *testing.T) {
@@ -40,55 +39,6 @@ func TestSet(t *testing.T) {
 	fmt.Println(stringType.Get(context.Background(), key1, 1, "2"))
 	time.Sleep(time.Second * 2)
 	fmt.Println(stringType.Get(context.Background(), key1, 1, "2"))
-
-	//	err := redismodule.SetAnyWithJson(context.Background(), "key", value)
-	//	if err != nil {
-	//		fmt.Printf("%+v\n", err)
-	//	}
-	//
-	//	err = redismodule.SetAny(context.Background(), "key1", 123.4)
-	//	if err != nil {
-	//		fmt.Printf("%+v\n", err)
-	//	}
-	//
-	//	err = redismodule.SetBytes(context.Background(), "key2", []byte{1, 2, 3})
-	//	if err != nil {
-	//		fmt.Printf("%+v\n", err)
-	//	}
-	//
-	//	err = redismodule.MSet(context.Background(), map[redismodule.RedisKey]string{"mkey1": "1", "mkey2": "2"})
-	//	if err != nil {
-	//		fmt.Printf("%+v\n", err)
-	//	}
-	//	fmt.Println(m.UnloadByConfig())
-	//}
-	//
-	//func TestGet(t *testing.T) {
-	//
-	//	fmt.Println(redismodule.Get(context.Background(), "key2"))
-	//
-	//	var user User // error
-	//	fmt.Println(redismodule.GetAny(context.Background(), "key", &user))
-	//	fmt.Printf("%+v\n", user)
-	//
-	//	fmt.Println(redismodule.GetAnyWithJson(context.Background(), "key", &user))
-	//	fmt.Printf("%+v\n", user)
-	//
-	//	var floatV float64
-	//	fmt.Println(redismodule.GetAny(context.Background(), "key1", &floatV))
-	//	fmt.Printf("%v\n", floatV)
-	//
-	//	fmt.Println(redismodule.MGet(context.Background(), "mkey1", "mkey2"))
-	//
-	//	type Strings struct {
-	//		Value1 string `redis:"mkey1"`
-	//		Value2 string `redis:"mkey2"`
-	//	}
-	//
-	//	var strings Strings
-	//	fmt.Println(redismodule.MGetAny(context.Background(), &strings, "mkey1", "mkey2"))
-	//	fmt.Printf("%+v\n", strings)
-	//	fmt.Println(m.Unload(2))
 }
 
 type User struct {
@@ -102,6 +52,10 @@ func (u *User) MarshalBinary() (data []byte, err error) {
 func (u *User) UnmarshalBinary(data []byte) error {
 	u.Name = string(data)
 	return nil
+}
+
+type Person struct {
+	Name string
 }
 
 func TestSetAny(t *testing.T) {
@@ -123,6 +77,25 @@ func TestSetAny(t *testing.T) {
 	fmt.Printf("%v\n", result)
 }
 
+func TestSetJson(t *testing.T) {
+	stringType := redismodule.StringType()
+	key := redismodule.RedisKey{
+		KeyFormat: "json",
+	}
+
+	value := &Person{Name: "李四"}
+	err := stringType.SetAnyWithJson(context.Background(), key, value)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	result := Person{}
+	fmt.Println(stringType.GetAnyWithJson(context.Background(), key, &result))
+	fmt.Printf("%v\n", result)
+
+}
+
 func TestMSet(t *testing.T) {
 	stringType := redismodule.StringType()
 	err := stringType.MSet(context.Background(), map[string]string{"11": "aa"})
@@ -138,6 +111,13 @@ func TestMSet(t *testing.T) {
 		return
 	}
 	fmt.Println(stringType.MGetWithHashTag(context.Background(), "a", "a", "aaaa", "b"))
+
+	err = stringType.MSetBytes(context.Background(), map[string][]byte{"b1": {1, 2, 3}})
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	fmt.Println(stringType.MGetBytes(context.Background(), "b1"))
 }
 
 func TestClient(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/redis/go-redis/v9"
 )
@@ -11,9 +12,7 @@ import (
 type typeString struct {
 }
 
-var (
-	stringType = new(typeString)
-)
+var stringType = new(typeString)
 
 func StringType() *typeString {
 	return stringType
@@ -144,6 +143,22 @@ func (*typeString) MSetBytes(ctx context.Context, data map[string][]byte) error 
 	return mset(ctx, array)
 }
 
+// MSetBytesWithHashTag 批量设置字节数据
+func (*typeString) MSetBytesWithHashTag(ctx context.Context, hashTag string, data map[string][]byte) error {
+	if data == nil || len(data) == 0 {
+		return errors.New("nil value")
+	}
+	array := make([]interface{}, len(data)*2)
+	index := 0
+	for k, v := range data {
+		array[index] = "{" + hashTag + "}" + k
+		index += 1
+		array[index] = v
+		index += 1
+	}
+	return mset(ctx, array)
+}
+
 // Get 将指定的key以String类型获取
 func (*typeString) Get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (string, error) {
 	cmd, err := get(ctx, key, keyAppend...)
@@ -153,7 +168,7 @@ func (*typeString) Get(ctx context.Context, key RedisKey, keyAppend ...interface
 	return cmd.Val(), err
 }
 
-func parseMgetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
+func parseMGetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -174,13 +189,29 @@ func parseMgetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
 	return k, nil
 }
 
+func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
+	if err != nil {
+		return nil, err
+	}
+	v, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	k := make([][]byte, len(v))
+	for i, d := range v {
+		if d != nil {
+			k[i] = []byte(d.(string))
+		}
+	}
+	return k, nil
+}
+
 // MGet 一次性获取多个String类型的值
 func (*typeString) MGet(ctx context.Context, keys ...string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("nil keys")
 	}
-	cmd, err := mget(ctx, keys...)
-	return parseMgetStringValue(cmd, err)
+	return parseMGetStringValue(mget(ctx, keys...))
 }
 
 // MGetWithHashTag 一次性获取多个String类型的值
@@ -191,31 +222,36 @@ func (*typeString) MGetWithHashTag(ctx context.Context, hashTag string, keys ...
 	for index, key := range keys {
 		keys[index] = "{" + hashTag + "}" + key
 	}
-	cmd, err := mget(ctx, keys...)
-	return parseMgetStringValue(cmd, err)
-
+	return parseMGetStringValue(mget(ctx, keys...))
 }
 
 // MGetBytes 一次性获取多个字节数组的值
 func (*typeString) MGetBytes(ctx context.Context, keys ...string) ([][]byte, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Logrus().Errorf("painc %+v", err)
+		}
+	}()
 	if len(keys) == 0 {
 		return nil, errors.New("nil keys")
 	}
-	slice, err := mget(ctx, keys...)
-	v, err := slice.Result()
-	if err != nil {
-		return nil, err
-	}
+	return parseMGetBytesValue(mget(ctx, keys...))
+}
 
-	k := make([][]byte, len(v))
-	for i, d := range v {
-		if b, ok := d.([]byte); ok {
-			k[i] = b
-		} else {
-			return nil, errors.New("not a string value")
+// MGetBytesWithHashTag 一次性获取多个字节数组的值
+func (*typeString) MGetBytesWithHashTag(ctx context.Context, hashTag string, keys ...string) ([][]byte, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Logrus().Errorf("painc %+v", err)
 		}
+	}()
+	if len(keys) == 0 {
+		return nil, errors.New("nil keys")
 	}
-	return k, nil
+	for index, key := range keys {
+		keys[index] = "{" + hashTag + "}" + key
+	}
+	return parseMGetBytesValue(mget(ctx, keys...))
 }
 
 // GetBytes 以字节形式获取指定的值
