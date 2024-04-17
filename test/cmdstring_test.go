@@ -29,7 +29,7 @@ func init() {
 }
 
 func TestSet(t *testing.T) {
-	stringType := redismodule.StringType()
+	stringType := redismodule.StringCmd()
 
 	key1 := redismodule.RedisKey{
 		KeyFormat: "string:%d:%s",
@@ -60,7 +60,7 @@ type Person struct {
 
 func TestSetAny(t *testing.T) {
 
-	stringType := redismodule.StringType()
+	stringType := redismodule.StringCmd()
 	key := redismodule.RedisKey{
 		KeyFormat: "key2",
 	}
@@ -78,7 +78,7 @@ func TestSetAny(t *testing.T) {
 }
 
 func TestSetJson(t *testing.T) {
-	stringType := redismodule.StringType()
+	stringType := redismodule.StringCmd()
 	key := redismodule.RedisKey{
 		KeyFormat: "json",
 	}
@@ -97,7 +97,7 @@ func TestSetJson(t *testing.T) {
 }
 
 func TestMSet(t *testing.T) {
-	stringType := redismodule.StringType()
+	stringType := redismodule.StringCmd()
 	err := stringType.MSet(context.Background(), map[string]string{"11": "aa"})
 	if err != nil {
 		fmt.Printf("%+v\n", err)

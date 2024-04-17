@@ -9,16 +9,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type typeString struct {
+type cmdString struct {
 }
 
-var stringType = new(typeString)
+var stringCmd = new(cmdString)
 
-func StringType() *typeString {
-	return stringType
+func StringCmd() *cmdString {
+	return stringCmd
 }
 
-func keyString(keyFormat string, keyAppend ...interface{}) string {
+func OriginKeyString(keyFormat string, keyAppend ...interface{}) string {
 	if len(keyAppend) > 0 {
 		return fmt.Sprintf(keyFormat, keyAppend...)
 	}
@@ -29,7 +29,7 @@ func set(ctx context.Context, key RedisKey, value interface{}, keyAppend ...inte
 	if value == nil {
 		return errors.New("nil value")
 	}
-	status := redisClient.Set(ctx, keyString(key.KeyFormat, keyAppend...), value, key.Expire)
+	status := redisClient.Set(ctx, OriginKeyString(key.KeyFormat, keyAppend...), value, key.Expire)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func mset(ctx context.Context, data []interface{}) error {
 }
 
 func get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (*redis.StringCmd, error) {
-	cmd := redisClient.Get(ctx, keyString(key.KeyFormat, keyAppend...))
+	cmd := redisClient.Get(ctx, OriginKeyString(key.KeyFormat, keyAppend...))
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return cmd, nil // wrap nil error
@@ -70,24 +70,24 @@ func mget(ctx context.Context, keys ...string) (*redis.SliceCmd, error) {
 }
 
 // Set 设置字符串
-func (*typeString) Set(ctx context.Context, key RedisKey, value string, keyAppend ...interface{}) error {
+func (*cmdString) Set(ctx context.Context, key RedisKey, value string, keyAppend ...interface{}) error {
 	return set(ctx, key, []byte(value), keyAppend...)
 }
 
 // SetBytes 设置字节数据
-func (*typeString) SetBytes(ctx context.Context, key RedisKey, value []byte, keyAppend ...interface{}) error {
+func (*cmdString) SetBytes(ctx context.Context, key RedisKey, value []byte, keyAppend ...interface{}) error {
 	return set(ctx, key, value, keyAppend...)
 }
 
 // SetAny 原始RedisClient Set指令
 // 适用于设置基本类型 或 该值类型需要实现BinaryMarshaler的复杂结构体
-func (*typeString) SetAny(ctx context.Context, key RedisKey, value interface{}, keyAppend ...interface{}) error {
+func (*cmdString) SetAny(ctx context.Context, key RedisKey, value interface{}, keyAppend ...interface{}) error {
 	return set(ctx, key, value, keyAppend...)
 }
 
 // SetAnyWithJson 设置其他类型值
 // 设置任何类型，将被以json格式进行编码存储
-func (*typeString) SetAnyWithJson(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
+func (*cmdString) SetAnyWithJson(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
 	bytes, err := json.ToJsonBytesError(value)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (*typeString) SetAnyWithJson(ctx context.Context, key RedisKey, value any, 
 }
 
 // MSet 批量设置字符串
-func (*typeString) MSet(ctx context.Context, data map[string]string) error {
+func (*cmdString) MSet(ctx context.Context, data map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return errors.New("nil value")
 	}
@@ -112,7 +112,7 @@ func (*typeString) MSet(ctx context.Context, data map[string]string) error {
 }
 
 // MSetWithHashTag 批量设置字符串 用于在集群模式指定hashTag将key分配在同一个hash槽中
-func (*typeString) MSetWithHashTag(ctx context.Context, hashTag string, data map[string]string) error {
+func (*cmdString) MSetWithHashTag(ctx context.Context, hashTag string, data map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return errors.New("nil value")
 	}
@@ -128,7 +128,7 @@ func (*typeString) MSetWithHashTag(ctx context.Context, hashTag string, data map
 }
 
 // MSetBytes 批量设置字节数据
-func (*typeString) MSetBytes(ctx context.Context, data map[string][]byte) error {
+func (*cmdString) MSetBytes(ctx context.Context, data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
 		return errors.New("nil value")
 	}
@@ -144,7 +144,7 @@ func (*typeString) MSetBytes(ctx context.Context, data map[string][]byte) error 
 }
 
 // MSetBytesWithHashTag 批量设置字节数据
-func (*typeString) MSetBytesWithHashTag(ctx context.Context, hashTag string, data map[string][]byte) error {
+func (*cmdString) MSetBytesWithHashTag(ctx context.Context, hashTag string, data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
 		return errors.New("nil value")
 	}
@@ -160,7 +160,7 @@ func (*typeString) MSetBytesWithHashTag(ctx context.Context, hashTag string, dat
 }
 
 // Get 将指定的key以String类型获取
-func (*typeString) Get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (string, error) {
+func (*cmdString) Get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (string, error) {
 	cmd, err := get(ctx, key, keyAppend...)
 	if err != nil {
 		return "", err
@@ -207,7 +207,7 @@ func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
 }
 
 // MGet 一次性获取多个String类型的值
-func (*typeString) MGet(ctx context.Context, keys ...string) ([]string, error) {
+func (*cmdString) MGet(ctx context.Context, keys ...string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("nil keys")
 	}
@@ -215,7 +215,7 @@ func (*typeString) MGet(ctx context.Context, keys ...string) ([]string, error) {
 }
 
 // MGetWithHashTag 一次性获取多个String类型的值
-func (*typeString) MGetWithHashTag(ctx context.Context, hashTag string, keys ...string) ([]string, error) {
+func (*cmdString) MGetWithHashTag(ctx context.Context, hashTag string, keys ...string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("nil keys")
 	}
@@ -226,7 +226,7 @@ func (*typeString) MGetWithHashTag(ctx context.Context, hashTag string, keys ...
 }
 
 // MGetBytes 一次性获取多个字节数组的值
-func (*typeString) MGetBytes(ctx context.Context, keys ...string) ([][]byte, error) {
+func (*cmdString) MGetBytes(ctx context.Context, keys ...string) ([][]byte, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Logrus().Errorf("painc %+v", err)
@@ -239,7 +239,7 @@ func (*typeString) MGetBytes(ctx context.Context, keys ...string) ([][]byte, err
 }
 
 // MGetBytesWithHashTag 一次性获取多个字节数组的值
-func (*typeString) MGetBytesWithHashTag(ctx context.Context, hashTag string, keys ...string) ([][]byte, error) {
+func (*cmdString) MGetBytesWithHashTag(ctx context.Context, hashTag string, keys ...string) ([][]byte, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Logrus().Errorf("painc %+v", err)
@@ -255,7 +255,7 @@ func (*typeString) MGetBytesWithHashTag(ctx context.Context, hashTag string, key
 }
 
 // GetBytes 以字节形式获取指定的值
-func (*typeString) GetBytes(ctx context.Context, key RedisKey, keyAppend ...interface{}) ([]byte, error) {
+func (*cmdString) GetBytes(ctx context.Context, key RedisKey, keyAppend ...interface{}) ([]byte, error) {
 	cmd, err := get(ctx, key, keyAppend...)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (*typeString) GetBytes(ctx context.Context, key RedisKey, keyAppend ...inte
 }
 
 // GetAny 以指定类型获取指定值
-func (*typeString) GetAny(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
+func (*cmdString) GetAny(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
 	cmd, err := get(ctx, key, keyAppend...)
 	if err != nil {
 		return err
@@ -273,7 +273,7 @@ func (*typeString) GetAny(ctx context.Context, key RedisKey, value any, keyAppen
 }
 
 // GetAnyWithJson 以Json反序列化形式获取指定值
-func (t *typeString) GetAnyWithJson(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
+func (t *cmdString) GetAnyWithJson(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
 	bytes, err := t.GetBytes(ctx, key, keyAppend...)
 	if err != nil {
 		return err
