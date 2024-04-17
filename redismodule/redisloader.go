@@ -13,11 +13,19 @@ import (
 var redisClient redis.UniversalClient
 var redisLockerClient *redislock.Client
 
-type RedisModule struct {
-	RedisConfig       *redis.UniversalOptions
-	RedisModuleConfig *declaration.ModuleConfig
+type RedisKey struct {
 
-	RedisInterceptor func(instance redis.UniversalClient)
+	// 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
+	KeyFormat string
+	Expire    time.Duration
+}
+
+type RedisModule struct {
+	RedisConfig     redis.UniversalOptions
+	LazyRedisConfig func() redis.UniversalOptions
+
+	RedisModuleConfig *declaration.ModuleConfig
+	RedisInterceptor  func(instance redis.UniversalClient)
 }
 
 func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
@@ -38,7 +46,10 @@ func (r *RedisModule) ModuleConfig() *declaration.ModuleConfig {
 }
 
 func (r *RedisModule) Register() (interface{}, error) {
-	redisClient = redis.NewUniversalClient(r.RedisConfig)
+	if r.LazyRedisConfig != nil {
+		r.RedisConfig = r.LazyRedisConfig()
+	}
+	redisClient = redis.NewUniversalClient(&r.RedisConfig)
 	status := redisClient.Ping(context.Background())
 	err := status.Err()
 	if err != nil {
