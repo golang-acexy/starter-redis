@@ -60,27 +60,42 @@ func TestMuxLockClient(t *testing.T) {
 	TestLockWithDeadline(t)
 }
 
-//func executable() {
-//	time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
-//	ctx := context.Background()
-//	var v int
-//	_ = redismodule.GetAny(ctx, "redis-key", &v)
-//	v += 1
-//	fmt.Println("set ", v, "into redis")
-//	_ = redismodule.SetAny(ctx, "redis-key", v)
-//}
-//
-//// 快速执行多次该方法，模拟多实例分布式锁
-//func TestDistributedLock(t *testing.T) {
-//	key := "distributed-key"
-//	for i := 0; i < 100; i++ {
-//		go func() {
-//			err := redismodule.LockWithDeadline(context.Background(), key, time.Minute, time.Now().Add(time.Minute*5), 200, executable)
-//			if err != nil {
-//				fmt.Printf("%+v %s \n", err, key)
-//				return
-//			}
-//		}()
-//	}
-//	time.Sleep(time.Second * 100)
-//}
+func executable() {
+	time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
+	ctx := context.Background()
+
+	key1 := redismodule.RedisKey{
+		KeyFormat: "redis-key",
+	}
+
+	var v int
+	err := redismodule.StringCmd().GetAny(ctx, key1, &v)
+	if err != nil {
+		fmt.Println(err)
+	}
+	v += 1
+	fmt.Println("set ", v, "into redis")
+	err = redismodule.StringCmd().SetAny(ctx, key1, v)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func TestExecutable(t *testing.T) {
+	executable()
+}
+
+// 快速执行多次该方法，模拟多实例分布式锁
+func TestDistributedLock(t *testing.T) {
+	key := "distributed-key"
+	for i := 0; i < 100; i++ {
+		go func() {
+			err := redismodule.LockWithDeadline(context.Background(), key, time.Minute, time.Now().Add(time.Minute*5), 200, executable)
+			if err != nil {
+				fmt.Printf("%+v %s \n", err, key)
+				return
+			}
+		}()
+	}
+	time.Sleep(time.Second * 40)
+}

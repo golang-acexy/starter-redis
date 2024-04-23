@@ -50,9 +50,9 @@ func get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (*redis.St
 	cmd := redisClient.Get(ctx, OriginKeyString(key.KeyFormat, keyAppend...))
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), redis.Nil) {
-			return cmd, nil // wrap nil error
+			return nil, nil // wrap nil error
 		}
-		return cmd, cmd.Err()
+		return nil, cmd.Err()
 	}
 	return cmd, nil
 }
@@ -62,7 +62,7 @@ func mget(ctx context.Context, keys ...string) (*redis.SliceCmd, error) {
 	err := slice.Err()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return slice, nil // wrap nil error
+			return nil, nil // wrap nil error
 		}
 		return nil, err
 	}
@@ -162,14 +162,14 @@ func (*cmdString) MSetBytesWithHashTag(ctx context.Context, hashTag string, data
 // Get 将指定的key以String类型获取
 func (*cmdString) Get(ctx context.Context, key RedisKey, keyAppend ...interface{}) (string, error) {
 	cmd, err := get(ctx, key, keyAppend...)
-	if err != nil {
+	if err != nil || cmd == nil {
 		return "", err
 	}
 	return cmd.Val(), err
 }
 
 func parseMGetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
-	if err != nil {
+	if err != nil || cmd == nil {
 		return nil, err
 	}
 	v, err := cmd.Result()
@@ -257,7 +257,7 @@ func (*cmdString) MGetBytesWithHashTag(ctx context.Context, hashTag string, keys
 // GetBytes 以字节形式获取指定的值
 func (*cmdString) GetBytes(ctx context.Context, key RedisKey, keyAppend ...interface{}) ([]byte, error) {
 	cmd, err := get(ctx, key, keyAppend...)
-	if err != nil {
+	if err != nil || cmd == nil {
 		return nil, err
 	}
 	return cmd.Bytes()
@@ -266,7 +266,7 @@ func (*cmdString) GetBytes(ctx context.Context, key RedisKey, keyAppend ...inter
 // GetAny 以指定类型获取指定值
 func (*cmdString) GetAny(ctx context.Context, key RedisKey, value any, keyAppend ...interface{}) error {
 	cmd, err := get(ctx, key, keyAppend...)
-	if err != nil {
+	if err != nil || cmd == nil {
 		return err
 	}
 	return cmd.Scan(value)

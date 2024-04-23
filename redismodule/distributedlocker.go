@@ -9,7 +9,7 @@ import (
 
 // 分布式锁
 
-func RawLockClient() *redislock.Client {
+func distributedLocker() *redislock.Client {
 	return redisLockerClient
 }
 
@@ -21,7 +21,7 @@ func lock(ctx context.Context, key string, ttl time.Duration, executable func(),
 		return err
 	}
 	defer func() {
-		err := redisLock.Release(context.Background())
+		err = redisLock.Release(context.Background())
 		if err != nil {
 			logger.Logrus().WithError(err).Errorln("release redisLock error key =", key)
 		}
@@ -43,7 +43,7 @@ func TryLockWithContext(ctx context.Context, key string, lockTtl time.Duration, 
 		return err
 	}
 	defer func() {
-		err := redisLock.Release(context.Background())
+		err = redisLock.Release(context.Background())
 		if err != nil {
 			logger.Logrus().WithError(err).Errorln("release redisLock error key =", key)
 		}

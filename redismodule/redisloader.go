@@ -84,7 +84,7 @@ func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err erro
 	return
 }
 
-// RawClient 获取原始RedisClient进行操作
-func RawClient() redis.UniversalClient {
+// RawInstance 获取原始RedisClient进行操作
+func RawInstance() redis.UniversalClient {
 	return redisClient
 }
