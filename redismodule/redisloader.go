@@ -2,7 +2,6 @@ package redismodule
 
 import (
 	"context"
-	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
@@ -69,7 +68,6 @@ func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err erro
 	go func() {
 		for {
 			stats := redisClient.PoolStats()
-			fmt.Printf("%+v\n", stats)
 			if stats.IdleConns == 0 && stats.TotalConns == 0 {
 				done <- true
 				return
@@ -86,7 +84,7 @@ func (r *RedisModule) Unregister(maxWaitSeconds uint) (gracefully bool, err erro
 	return
 }
 
-// RawClient 获取原始RedisClient进行操作
-func RawClient() redis.UniversalClient {
+// RawInstance 获取原始RedisClient进行操作
+func RawInstance() redis.UniversalClient {
 	return redisClient
 }

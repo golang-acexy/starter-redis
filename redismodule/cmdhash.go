@@ -96,6 +96,9 @@ func (*cmdHash) HMGet(ctx context.Context, key RedisKey, names []string, keyAppe
 	}
 	result, err := cmd.Result()
 	if err != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil, nil // wrap nil error
+		}
 		return nil, err
 	}
 	m := make([]string, len(result))
@@ -111,6 +114,9 @@ func (*cmdHash) HMGet(ctx context.Context, key RedisKey, names []string, keyAppe
 func (*cmdHash) HGetAll(ctx context.Context, key RedisKey, keyAppend ...interface{}) (map[string]string, error) {
 	cmd := hGetAll(ctx, key, keyAppend...)
 	if err := cmd.Err(); err != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return cmd.Result()
