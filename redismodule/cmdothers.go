@@ -53,7 +53,7 @@ func (c *cmdTopic) Unsubscribe(ctx context.Context, key RedisKey, keyAppend ...i
 	return c.pubSub.Unsubscribe(ctx, keyString)
 }
 
-// FIFO
+// FIFO 队列
 type cmdQueue struct {
 }
 
