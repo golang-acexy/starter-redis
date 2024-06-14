@@ -193,3 +193,16 @@ func TestQueue(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestQueuePop(t *testing.T) {
+	cmd := redismodule.QueueCmd()
+	key := redismodule.RedisKey{
+		KeyFormat: "queue",
+	}
+	c := cmd.Pop(context.Background(), key)
+
+	for d := range c {
+		fmt.Println(d)
+	}
+
+}
