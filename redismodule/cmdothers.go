@@ -76,6 +76,7 @@ func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}
 		for {
 			select {
 			case <-ctx.Done():
+				close(c)
 				return
 			default:
 				data, err := redisClient.BRPop(ctx, 0, keyString).Result()
