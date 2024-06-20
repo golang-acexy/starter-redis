@@ -190,7 +190,6 @@ func TestQueue(t *testing.T) {
 		}
 
 	}()
-
 	wg.Wait()
 }
 
@@ -199,10 +198,33 @@ func TestQueuePop(t *testing.T) {
 	key := redismodule.RedisKey{
 		KeyFormat: "queue",
 	}
-	c := cmd.Pop(context.Background(), key)
+	var wait sync.WaitGroup
+	wait.Add(2)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	c := cmd.Pop(ctx, key)
+	go func() {
+		for d := range c {
+			fmt.Println("work1 获取到数据", d)
+			time.Sleep(time.Second * 2)
+		}
+		fmt.Println("1数据管道已关闭")
+		wait.Done()
+	}()
 
-	for d := range c {
-		fmt.Println(d)
-	}
+	go func() {
+		for d := range c {
+			fmt.Println("work2 获取到数据", d)
+			time.Sleep(time.Second)
+		}
+		fmt.Println("2数据管道已关闭")
+		wait.Done()
+	}()
 
+	go func() {
+		time.Sleep(time.Second * 10)
+		cancelFunc()
+		fmt.Println("取消监听")
+	}()
+
+	wait.Wait()
 }
