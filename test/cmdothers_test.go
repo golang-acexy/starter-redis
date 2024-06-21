@@ -126,7 +126,7 @@ func TestQueue(t *testing.T) {
 
 	go func() {
 		for i := 1; i <= 10; i++ {
-			_ = cmd.Push(context.Background(), key1, fmt.Sprintf("1 hello %d", i))
+			_ = cmd.Push(context.Background(), false, key1, fmt.Sprintf("1 hello %d", i))
 			time.Sleep(time.Millisecond * 200)
 			fmt.Println("1 发送数据")
 		}
@@ -140,11 +140,11 @@ func TestQueue(t *testing.T) {
 		cancel1()
 	}()
 
-	c1 := cmd.Pop(ctx1, key1)
+	c1 := cmd.BPop(ctx1, true, time.Second, key1)
 
 	go func() {
 		for i := 1; i <= 10; i++ {
-			_ = cmd.Push(context.Background(), key2, fmt.Sprintf("2 hello %d", i))
+			_ = cmd.Push(context.Background(), false, key2, fmt.Sprintf("2 hello %d", i))
 			time.Sleep(time.Millisecond * 300)
 			fmt.Println("2 发送数据")
 		}
@@ -158,7 +158,7 @@ func TestQueue(t *testing.T) {
 		cancel2()
 	}()
 
-	c2 := cmd.Pop(ctx2, key2)
+	c2 := cmd.BPop(ctx2, true, time.Second, key2)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -196,12 +196,12 @@ func TestQueue(t *testing.T) {
 func TestQueuePop(t *testing.T) {
 	cmd := redismodule.QueueCmd()
 	key := redismodule.RedisKey{
-		KeyFormat: "queue",
+		KeyFormat: "queue1",
 	}
 	var wait sync.WaitGroup
 	wait.Add(2)
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	c := cmd.Pop(ctx, key)
+	c := cmd.BPop(ctx, true, 0, key)
 	go func() {
 		for d := range c {
 			fmt.Println("work1 获取到数据", d)
@@ -221,7 +221,7 @@ func TestQueuePop(t *testing.T) {
 	}()
 
 	go func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 3)
 		cancelFunc()
 		fmt.Println("取消监听")
 	}()

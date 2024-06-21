@@ -6,6 +6,7 @@ import (
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/redis/go-redis/v9"
 	"sync"
+	"time"
 )
 
 type cmdTopic struct {
@@ -53,7 +54,7 @@ func (c *cmdTopic) Unsubscribe(ctx context.Context, key RedisKey, keyAppend ...i
 	return c.pubSub.Unsubscribe(ctx, keyString)
 }
 
-// FIFO 队列
+// list 队列
 type cmdQueue struct {
 }
 
@@ -64,29 +65,50 @@ func QueueCmd() *cmdQueue {
 }
 
 // Push 数据入队
-func (*cmdQueue) Push(ctx context.Context, key RedisKey, data string, keyAppend ...interface{}) error {
+func (*cmdQueue) Push(ctx context.Context, directionRight bool, key RedisKey, data string, keyAppend ...interface{}) error {
+	if directionRight {
+		return redisClient.RPush(ctx, OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
+	}
 	return redisClient.LPush(ctx, OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
 }
 
-// Pop 数据出队 FIFO
-func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}) <-chan string {
+// BPop 数据出队
+func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...interface{}) <-chan string {
 	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
 	c := make(chan string)
 	go func() {
+		defer close(c)
 		for {
 			select {
 			case <-ctx.Done():
-				close(c)
 				return
 			default:
-				data, err := redisClient.BRPop(ctx, 0, keyString).Result()
-				if err != nil {
-					logger.Logrus().Error("pop data error", keyString, err)
+				var data []string
+				var err error
+				if directionRight {
+					data, err = redisClient.BRPop(ctx, timeout, keyString).Result()
 				} else {
+					data, err = redisClient.BLPop(ctx, timeout, keyString).Result()
+				}
+				if err == nil {
 					c <- data[1]
+				} else {
+					if !errors.Is(err, redis.Nil) && !errors.Is(err, context.Canceled) {
+						logger.Logrus().WithError(err).Errorln("Bpop catch error", err)
+					}
 				}
 			}
 		}
 	}()
+	if timeout == 0 {
+		// 该逻辑是为了防止使用永久阻塞式弹出数据的方式将导致上面的select无法感知上下文取消
+		// 通过补偿来关闭业务数据管道
+		go func() {
+			select {
+			case <-ctx.Done():
+				close(c)
+			}
+		}()
+	}
 	return c
 }
