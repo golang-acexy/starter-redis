@@ -54,7 +54,7 @@ func (c *cmdTopic) Unsubscribe(ctx context.Context, key RedisKey, keyAppend ...i
 	return c.pubSub.Unsubscribe(ctx, keyString)
 }
 
-// FIFO 队列
+// list 队列
 type cmdQueue struct {
 }
 
@@ -65,12 +65,18 @@ func QueueCmd() *cmdQueue {
 }
 
 // Push 数据入队
-func (*cmdQueue) Push(ctx context.Context, key RedisKey, data string, keyAppend ...interface{}) error {
+func (*cmdQueue) Push(ctx context.Context, directionRight bool, key RedisKey, data string, keyAppend ...interface{}) error {
+	if directionRight {
+		return redisClient.RPush(ctx, OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
+	}
 	return redisClient.LPush(ctx, OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
 }
 
-// Pop 数据出队 FIFO
-func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}) <-chan string {
+// BPop 数据出队
+func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...interface{}) <-chan string {
+	if timeout == 0 {
+		logger.Logrus().Warningln("The timeout duration of 0 will prevent the immediate triggering of context cancellation")
+	}
 	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
 	c := make(chan string)
 	go func() {
@@ -80,11 +86,19 @@ func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}
 			case <-ctx.Done():
 				return
 			default:
-				data, err := redisClient.BRPop(ctx, time.Second*5, keyString).Result()
-				if err != nil {
-					logger.Logrus().WithError(err).Warningln("pop data error", keyString, err)
+				var data []string
+				var err error
+				if directionRight {
+					data, err = redisClient.BRPop(ctx, timeout, keyString).Result()
 				} else {
+					data, err = redisClient.BLPop(ctx, timeout, keyString).Result()
+				}
+				if err == nil {
 					c <- data[1]
+				} else {
+					if !errors.Is(err, redis.Nil) && !errors.Is(err, context.Canceled) {
+						logger.Logrus().WithError(err).Errorln("Bpop catch error", err)
+					}
 				}
 			}
 		}
