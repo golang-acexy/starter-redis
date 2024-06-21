@@ -73,15 +73,15 @@ func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}
 	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
 	c := make(chan string)
 	go func() {
+		defer close(c)
 		for {
 			select {
 			case <-ctx.Done():
-				close(c)
 				return
 			default:
 				data, err := redisClient.BRPop(ctx, 0, keyString).Result()
 				if err != nil {
-					logger.Logrus().Error("pop data error", keyString, err)
+					logger.Logrus().WithError(err).Warningln("pop data error", keyString, err)
 				} else {
 					c <- data[1]
 				}
