@@ -6,6 +6,7 @@ import (
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/redis/go-redis/v9"
 	"sync"
+	"time"
 )
 
 type cmdTopic struct {
@@ -79,7 +80,7 @@ func (*cmdQueue) Pop(ctx context.Context, key RedisKey, keyAppend ...interface{}
 			case <-ctx.Done():
 				return
 			default:
-				data, err := redisClient.BRPop(ctx, 0, keyString).Result()
+				data, err := redisClient.BRPop(ctx, time.Second*5, keyString).Result()
 				if err != nil {
 					logger.Logrus().WithError(err).Warningln("pop data error", keyString, err)
 				} else {
