@@ -74,9 +74,6 @@ func (*cmdQueue) Push(ctx context.Context, directionRight bool, key RedisKey, da
 
 // BPop 数据出队
 func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...interface{}) <-chan string {
-	if timeout == 0 {
-		logger.Logrus().Warningln("The timeout duration of 0 will prevent the immediate triggering of context cancellation")
-	}
 	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
 	c := make(chan string)
 	go func() {
@@ -103,5 +100,15 @@ func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Dur
 			}
 		}
 	}()
+	if timeout == 0 {
+		// 该逻辑是为了防止使用永久阻塞式弹出数据的方式将导致上面的select无法感知上下文取消
+		// 通过补偿来关闭业务数据管道
+		go func() {
+			select {
+			case <-ctx.Done():
+				close(c)
+			}
+		}()
+	}
 	return c
 }

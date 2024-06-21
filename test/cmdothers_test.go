@@ -201,7 +201,7 @@ func TestQueuePop(t *testing.T) {
 	var wait sync.WaitGroup
 	wait.Add(2)
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	c := cmd.BPop(ctx, true, time.Second, key)
+	c := cmd.BPop(ctx, true, 0, key)
 	go func() {
 		for d := range c {
 			fmt.Println("work1 获取到数据", d)
