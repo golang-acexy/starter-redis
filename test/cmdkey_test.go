@@ -3,32 +3,32 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redismodule"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
 )
 
 func TestDel(t *testing.T) {
-	keyType := redismodule.KeyCmd()
-	key := redismodule.RedisKey{
+	keyType := redisstarter.KeyCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
-	fmt.Println(redismodule.OriginKeyString(key.KeyFormat))
+	fmt.Println(redisstarter.OriginKeyString(key.KeyFormat))
 	fmt.Println(keyType.Del(context.Background(), key))
 }
 
 func TestExists(t *testing.T) {
-	keyType := redismodule.KeyCmd()
-	key := redismodule.RedisKey{
+	keyType := redisstarter.KeyCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
 	fmt.Println(keyType.Exists(context.Background(), key))
 }
 
 func TestExpire(t *testing.T) {
-	keyType := redismodule.KeyCmd()
-	key := redismodule.RedisKey{
+	keyType := redisstarter.KeyCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
-	fmt.Println(keyType.Expire(context.Background(), redismodule.OriginKeyString(key.KeyFormat), time.Second*5))
+	fmt.Println(keyType.Expire(context.Background(), redisstarter.OriginKeyString(key.KeyFormat), time.Second*5))
 }

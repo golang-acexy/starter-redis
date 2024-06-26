@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
-	"github.com/golang-acexy/starter-redis/redismodule"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
 )
@@ -20,7 +20,7 @@ func TestTryLock(t *testing.T) {
 }
 
 func tryLock(k string, i *int) {
-	err := redismodule.TryLock(k, time.Minute, func() {
+	err := redisstarter.TryLock(k, time.Minute, func() {
 		*i = *i + 1
 		fmt.Println(*i)
 	})
@@ -31,7 +31,7 @@ func tryLock(k string, i *int) {
 }
 
 func lock(ctx context.Context, key string, i *int) {
-	err := redismodule.LockWithDeadline(ctx, key, time.Minute, time.Now().Add(time.Minute), 200, func() {
+	err := redisstarter.LockWithDeadline(ctx, key, time.Minute, time.Now().Add(time.Minute), 200, func() {
 		*i = *i + 1
 		time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
 		fmt.Println(*i)
@@ -64,18 +64,18 @@ func executable() {
 	time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
 	ctx := context.Background()
 
-	key1 := redismodule.RedisKey{
+	key1 := redisstarter.RedisKey{
 		KeyFormat: "redis-key",
 	}
 
 	var v int
-	err := redismodule.StringCmd().GetAny(ctx, key1, &v)
+	err := redisstarter.StringCmd().GetAny(ctx, key1, &v)
 	if err != nil {
 		fmt.Println(err)
 	}
 	v += 1
 	fmt.Println("set ", v, "into redis")
-	err = redismodule.StringCmd().SetAny(ctx, key1, v)
+	err = redisstarter.StringCmd().SetAny(ctx, key1, v)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -90,7 +90,7 @@ func TestDistributedLock(t *testing.T) {
 	key := "distributed-key"
 	for i := 0; i < 100; i++ {
 		go func() {
-			err := redismodule.LockWithDeadline(context.Background(), key, time.Minute, time.Now().Add(time.Minute*5), 200, executable)
+			err := redisstarter.LockWithDeadline(context.Background(), key, time.Minute, time.Now().Add(time.Minute*5), 200, executable)
 			if err != nil {
 				fmt.Printf("%+v %s \n", err, key)
 				return

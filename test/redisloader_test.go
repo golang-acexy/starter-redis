@@ -1,91 +1,116 @@
 package test
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
-	"github.com/golang-acexy/starter-redis/redismodule"
+	"github.com/acexy/golang-toolkit/math/random"
+	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/golang-acexy/starter-parent/parent"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"github.com/redis/go-redis/v9"
 	"testing"
 	"time"
 )
 
-var moduleLoaders []declaration.ModuleLoader
-var rModule *redismodule.RedisModule
+const isCluster = true
+
+var loader *parent.StarterLoader
+
+var standalone = &redisstarter.RedisStarter{
+	RedisConfig: redis.UniversalOptions{
+		Addrs:    []string{":6379"},
+		Password: "tech-acexy",
+		DB:       0,
+	},
+	InitFunc: func(instance redis.UniversalClient) {
+		go func() {
+			for {
+				fmt.Println(json.ToJson(instance.PoolStats()))
+				time.Sleep(time.Second)
+			}
+		}()
+	},
+}
+
+var cluster = &redisstarter.RedisStarter{
+	RedisConfig: redis.UniversalOptions{
+		Addrs:    []string{":6379", ":6381", ":6380"},
+		Password: "tech-acexy",
+	},
+	InitFunc: func(instance redis.UniversalClient) {
+		fmt.Println(instance.PoolStats())
+	},
+}
+
+func TestMain(m *testing.M) {
+
+	var loadType *redisstarter.RedisStarter
+	if isCluster {
+		loadType = cluster
+	} else {
+		loadType = standalone
+	}
+	loader = parent.NewStarterLoader([]parent.Starter{loadType})
+
+	err := loader.Start()
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	m.Run()
+}
 
 // 单实例Redis
 func TestStandalone(t *testing.T) {
 
-	rModule = &redismodule.RedisModule{
-		RedisConfig: redis.UniversalOptions{
-			Addrs:    []string{":6379"},
-			Password: "tech-acexy",
-		},
-		RedisInterceptor: func(instance redis.UniversalClient) {
-			fmt.Println(instance.PoolStats())
-		},
-	}
-	moduleLoaders = []declaration.ModuleLoader{rModule}
-
-	m = declaration.Module{ModuleLoaders: moduleLoaders}
-
-	err := m.Load()
+	// 启动一批协程，模拟并发多连接执行中场景
+	go func() {
+		for i := 1; i <= 5; i++ {
+			go func() {
+				for {
+					err := redisstarter.StringCmd().Set(context.Background(), redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
+					if err != nil {
+						fmt.Println(err)
+					}
+					time.Sleep(time.Millisecond * 200)
+				}
+			}()
+		}
+	}()
+	time.Sleep(time.Second * 10)
+	stopResult, err := loader.StopBySetting()
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		fmt.Println(err)
 	}
-
-	// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
-	//go func() {
-	//	for i := 1; i <= 10; i++ {
-	//		go func() {
-	//			for {
-	//				err = redismodule.Set(context.Background(), redismodule.RedisKey(random.RandString(5)), random.RandString(5))
-	//				if err != nil {
-	//					fmt.Printf("%+v", err)
-	//				}
-	//			}
-	//		}()
-	//	}
-	//}()
-
-	time.Sleep(time.Second * 3)
-	fmt.Println(rModule.Unregister(10))
+	fmt.Println(json.ToJsonFormat(stopResult))
 }
 
 // 集群Redis
 func TestCluster(t *testing.T) {
-
-	rModule = &redismodule.RedisModule{
-		RedisConfig: redis.UniversalOptions{
-			Addrs:    []string{":6379", ":6381", ":6380"},
-			Password: "tech-acexy",
-		},
-		RedisInterceptor: func(instance redis.UniversalClient) {
-			fmt.Println(instance.PoolStats())
-		},
-	}
-	moduleLoaders = []declaration.ModuleLoader{rModule}
-
-	m = declaration.Module{ModuleLoaders: moduleLoaders}
-
-	err := m.Load()
+	clusterLoader := parent.NewStarterLoader([]parent.Starter{cluster})
+	err := clusterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
+		return
 	}
+	// 启动一批协程，模拟并发多连接执行中场景
+	go func() {
+		for i := 1; i <= 10; i++ {
+			go func() {
+				for {
+					err = redisstarter.StringCmd().Set(context.Background(), redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
+					if err != nil {
+						fmt.Println("invoke err", err)
+					}
+				}
+			}()
+		}
+	}()
 
-	//// 启动一批协程，并执行延迟sql，模拟并发多连接执行中场景
-	//go func() {
-	//	for i := 1; i <= 10; i++ {
-	//		go func() {
-	//			for {
-	//				err = redismodule.Set(context.Background(), redismodule.RedisKey(random.RandString(5)), random.RandString(5))
-	//				if err != nil {
-	//					fmt.Printf("%+v", err)
-	//				}
-	//			}
-	//		}()
-	//	}
-	//}()
-
-	time.Sleep(time.Second * 3)
-	fmt.Println(rModule.Unregister(10))
+	time.Sleep(time.Second * 10)
+	stopResult, err := loader.StopBySetting()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(json.ToJsonFormat(stopResult))
 }

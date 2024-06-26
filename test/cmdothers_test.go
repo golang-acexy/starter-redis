@@ -3,18 +3,18 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redismodule"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestSubscribeTopicStopWithContext(t *testing.T) {
-	cmd := redismodule.TopicCmd()
-	key1 := redismodule.RedisKey{
+	cmd := redisstarter.TopicCmd()
+	key1 := redisstarter.RedisKey{
 		KeyFormat: "topic",
 	}
-	key2 := redismodule.RedisKey{
+	key2 := redisstarter.RedisKey{
 		KeyFormat: "topic2",
 	}
 
@@ -81,8 +81,8 @@ func TestSubscribeTopicStopWithContext(t *testing.T) {
 
 func TestSubscribeTopicStopWithUnsubscribe(t *testing.T) {
 
-	cmd := redismodule.TopicCmd()
-	key1 := redismodule.RedisKey{
+	cmd := redisstarter.TopicCmd()
+	key1 := redisstarter.RedisKey{
 		KeyFormat: "topic",
 	}
 
@@ -115,12 +115,12 @@ func TestSubscribeTopicStopWithUnsubscribe(t *testing.T) {
 }
 
 func TestQueue(t *testing.T) {
-	cmd := redismodule.QueueCmd()
-	key1 := redismodule.RedisKey{
+	cmd := redisstarter.QueueCmd()
+	key1 := redisstarter.RedisKey{
 		KeyFormat: "queue",
 	}
 
-	key2 := redismodule.RedisKey{
+	key2 := redisstarter.RedisKey{
 		KeyFormat: "queue1",
 	}
 
@@ -194,8 +194,8 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueuePop(t *testing.T) {
-	cmd := redismodule.QueueCmd()
-	key := redismodule.RedisKey{
+	cmd := redisstarter.QueueCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "queue1",
 	}
 	var wait sync.WaitGroup
