@@ -3,14 +3,14 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redismodule"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
 )
 
 func TestHSet(t *testing.T) {
-	hashType := redismodule.HashCmd()
-	key := redismodule.RedisKey{
+	hashType := redisstarter.HashCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 		Expire:    time.Second * 1,
 	}
@@ -26,8 +26,8 @@ func TestHSet(t *testing.T) {
 }
 
 func TestHMSet(t *testing.T) {
-	hashType := redismodule.HashCmd()
-	key := redismodule.RedisKey{
+	hashType := redisstarter.HashCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-m-hash",
 	}
 	err := hashType.HMSet(context.Background(), key, map[string]string{"1": "2", "3": "4", "5": "6"})
@@ -40,16 +40,16 @@ func TestHMSet(t *testing.T) {
 }
 
 func TestHGetAll(t *testing.T) {
-	hashType := redismodule.HashCmd()
-	key := redismodule.RedisKey{
+	hashType := redisstarter.HashCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-m-hash",
 	}
 	fmt.Println(hashType.HGetAll(context.Background(), key))
 }
 
 func TestHSetJson(t *testing.T) {
-	hashType := redismodule.HashCmd()
-	key := redismodule.RedisKey{
+	hashType := redisstarter.HashCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key-json-hash",
 	}
 

@@ -3,35 +3,15 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-parent/parentmodule/declaration"
-	"github.com/golang-acexy/starter-redis/redismodule"
-	"github.com/redis/go-redis/v9"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
 )
 
-var m declaration.Module
-
-func init() {
-	rModule = &redismodule.RedisModule{
-		RedisConfig: redis.UniversalOptions{
-			Addrs:    []string{":6379", ":6381", ":6380"},
-			Password: "tech-acexy",
-		},
-	}
-	moduleLoaders = []declaration.ModuleLoader{rModule}
-	m = declaration.Module{ModuleLoaders: moduleLoaders}
-
-	err := m.Load()
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-	}
-}
-
 func TestSet(t *testing.T) {
-	stringType := redismodule.StringCmd()
+	stringType := redisstarter.StringCmd()
 
-	key1 := redismodule.RedisKey{
+	key1 := redisstarter.RedisKey{
 		KeyFormat: "string:%d:%s",
 		Expire:    time.Second,
 	}
@@ -60,8 +40,8 @@ type Person struct {
 
 func TestSetAny(t *testing.T) {
 
-	stringType := redismodule.StringCmd()
-	key := redismodule.RedisKey{
+	stringType := redisstarter.StringCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "key2",
 	}
 
@@ -78,8 +58,8 @@ func TestSetAny(t *testing.T) {
 }
 
 func TestSetJson(t *testing.T) {
-	stringType := redismodule.StringCmd()
-	key := redismodule.RedisKey{
+	stringType := redisstarter.StringCmd()
+	key := redisstarter.RedisKey{
 		KeyFormat: "json",
 	}
 
@@ -97,7 +77,7 @@ func TestSetJson(t *testing.T) {
 }
 
 func TestMSet(t *testing.T) {
-	stringType := redismodule.StringCmd()
+	stringType := redisstarter.StringCmd()
 	err := stringType.MSet(context.Background(), map[string]string{"11": "aa"})
 	if err != nil {
 		fmt.Printf("%+v\n", err)

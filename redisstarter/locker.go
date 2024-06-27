@@ -1,4 +1,4 @@
-package redismodule
+package redisstarter
 
 import (
 	"context"
