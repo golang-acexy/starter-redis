@@ -100,7 +100,7 @@ func RawRedisClient() redis.UniversalClient {
 	return redisClient
 }
 
-// RawRedisLockerClient 获取原始RedisLockerClient进行操作
-func RawRedisLockerClient() *redislock.Client {
+// RawLockerClient 获取原始RedisLockerClient进行操作
+func RawLockerClient() *redislock.Client {
 	return redisLockerClient
 }
