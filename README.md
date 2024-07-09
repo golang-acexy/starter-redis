@@ -6,7 +6,7 @@
 
 #### 功能说明
 
-规范了Redis操作方法调用风格，统一RedisKey类型，统一过期时间设置，避免了全局写rediskey的问题，所有Redis操作方法只允许使用RedisKey类型作为key参数，方便集中定义
+规范了Redis操作方法调用风格，统一RedisKey类型，统一过期时间设置，避免了全局写rediskey的问题，所有Redis操作方法只允许使用RedisKey类型作为key参数，方便集中定义，**支持布隆过滤器操作**
 
 ```go
 type RedisKey struct {
