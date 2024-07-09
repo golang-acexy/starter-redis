@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const isCluster = true
+const isCluster = false
 
 var loader *parent.StarterLoader
 
@@ -25,7 +25,7 @@ var standalone = &redisstarter.RedisStarter{
 	InitFunc: func(instance redis.UniversalClient) {
 		go func() {
 			for {
-				fmt.Println(json.ToJson(instance.PoolStats()))
+				fmt.Println("test initFunc", json.ToJson(instance.PoolStats()))
 				time.Sleep(time.Second)
 			}
 		}()
