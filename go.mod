@@ -3,10 +3,10 @@ module github.com/golang-acexy/starter-redis
 go 1.20
 
 require (
-	github.com/acexy/golang-toolkit v0.0.15
+	github.com/acexy/golang-toolkit v0.0.17
 	github.com/bsm/redislock v0.9.4
-	github.com/golang-acexy/starter-parent v0.1.2
-	github.com/redis/go-redis/v9 v9.5.3
+	github.com/golang-acexy/starter-parent v0.1.3
+	github.com/redis/go-redis/v9 v9.5.4
 )
 
 require (
