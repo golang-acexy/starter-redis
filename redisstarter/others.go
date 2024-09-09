@@ -94,7 +94,7 @@ func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Dur
 					c <- data[1]
 				} else {
 					if !errors.Is(err, redis.Nil) && !errors.Is(err, context.Canceled) {
-						logger.Logrus().WithError(err).Errorln("Bpop catch error", err)
+						logger.Logrus().WithError(err).Errorln("BPop catch error", err)
 					}
 				}
 			}
