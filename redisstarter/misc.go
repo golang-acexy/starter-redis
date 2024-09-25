@@ -82,7 +82,7 @@ func (*cmdQueue) BPop(ctx context.Context, directionRight bool, timeout time.Dur
 		defer close(c)
 		exception := false
 		for {
-			if !exception {
+			if exception {
 				logger.Logrus().Warningln("BPop caught an exception, now sleeping for 5 seconds before retrying")
 				time.Sleep(time.Second * 5)
 			}
