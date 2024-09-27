@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
@@ -14,7 +13,7 @@ func TestDel(t *testing.T) {
 		KeyFormat: "key-hash",
 	}
 	fmt.Println(redisstarter.OriginKeyString(key.KeyFormat))
-	fmt.Println(keyType.Del(context.Background(), key))
+	fmt.Println(keyType.Del(key))
 }
 
 func TestExists(t *testing.T) {
@@ -22,7 +21,7 @@ func TestExists(t *testing.T) {
 	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
-	fmt.Println(keyType.Exists(context.Background(), key))
+	fmt.Println(keyType.Exists(key))
 }
 
 func TestExpire(t *testing.T) {
@@ -30,5 +29,5 @@ func TestExpire(t *testing.T) {
 	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
-	fmt.Println(keyType.Expire(context.Background(), redisstarter.OriginKeyString(key.KeyFormat), time.Second*5))
+	fmt.Println(keyType.Expire(key, time.Second*5))
 }

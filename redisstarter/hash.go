@@ -3,7 +3,6 @@ package redisstarter
 import (
 	"context"
 	"errors"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,55 +15,64 @@ func HashCmd() *cmdHash {
 	return hashCmd
 }
 
-func hSet(ctx context.Context, key RedisKey, value []interface{}, keyAppend ...interface{}) error {
+func hSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if value == nil {
 		return errors.New("nil value")
 	}
 	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
-	cmd := redisClient.HSet(ctx, originKey, value)
+	cmd := redisClient.HSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
 	if key.Expire > 0 {
-		keyCmd.Expire(ctx, originKey, key.Expire)
+		if keyCmd.Ttl(key, keyAppend...) < 0 {
+			keyCmd.Expire(key, key.Expire, keyAppend...)
+		}
 	}
 	return nil
 }
 
-func hMSet(ctx context.Context, key RedisKey, value []interface{}, keyAppend ...interface{}) error {
+func hMSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if len(value) == 0 {
 		return errors.New("nil value")
 	}
 	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
-	cmd := redisClient.HMSet(ctx, originKey, value)
+	cmd := redisClient.HMSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
 	if key.Expire > 0 {
-		keyCmd.Expire(ctx, originKey, key.Expire)
+		if keyCmd.Ttl(key, keyAppend...) < 0 {
+			keyCmd.Expire(key, key.Expire, keyAppend...)
+		}
 	}
 	return nil
 }
 
-func hGet(ctx context.Context, key RedisKey, name string, keyAppend ...interface{}) *redis.StringCmd {
-	return redisClient.HGet(ctx, OriginKeyString(key.KeyFormat, keyAppend...), name)
+func hGet(key RedisKey, name string, keyAppend ...interface{}) *redis.StringCmd {
+	return redisClient.HGet(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), name)
 }
 
-func hMGet(ctx context.Context, key RedisKey, names []string, keyAppend ...interface{}) *redis.SliceCmd {
-	return redisClient.HMGet(ctx, OriginKeyString(key.KeyFormat, keyAppend...), names...)
+func hMGet(key RedisKey, names []string, keyAppend ...interface{}) *redis.SliceCmd {
+	return redisClient.HMGet(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), names...)
 }
 
-func hGetAll(ctx context.Context, key RedisKey, keyAppend ...interface{}) *redis.MapStringStringCmd {
-	return redisClient.HGetAll(ctx, OriginKeyString(key.KeyFormat, keyAppend...))
+func hGetAll(key RedisKey, keyAppend ...interface{}) *redis.MapStringStringCmd {
+	return redisClient.HGetAll(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+}
+
+// HExists 判断Hash类型是否存在key
+func (*cmdHash) HExists(key RedisKey, name string, keyAppend ...interface{}) bool {
+	return redisClient.HExists(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), name).Val()
 }
 
 // HSet 设置Hash类型的值
-func (*cmdHash) HSet(ctx context.Context, key RedisKey, name, value string, keyAppend ...interface{}) error {
-	return hSet(ctx, key, []interface{}{name, value}, keyAppend...)
+func (*cmdHash) HSet(key RedisKey, name, value string, keyAppend ...interface{}) error {
+	return hSet(key, []interface{}{name, value}, keyAppend...)
 }
 
 // HMSet 一次性设置多个Hash类型的值
-func (*cmdHash) HMSet(ctx context.Context, key RedisKey, data map[string]string, keyAppend ...interface{}) error {
+func (*cmdHash) HMSet(key RedisKey, data map[string]string, keyAppend ...interface{}) error {
 	array := make([]interface{}, len(data)*2)
 	index := 0
 	for k, v := range data {
@@ -73,12 +81,12 @@ func (*cmdHash) HMSet(ctx context.Context, key RedisKey, data map[string]string,
 		array[index] = v
 		index++
 	}
-	return hMSet(ctx, key, array, keyAppend...)
+	return hMSet(key, array, keyAppend...)
 }
 
 // HGet 获取Hash指定key值
-func (*cmdHash) HGet(ctx context.Context, key RedisKey, name string, keyAppend ...interface{}) (string, error) {
-	cmd := hGet(ctx, key, name, keyAppend...)
+func (*cmdHash) HGet(key RedisKey, name string, keyAppend ...interface{}) (string, error) {
+	cmd := hGet(key, name, keyAppend...)
 	if err := cmd.Err(); err != nil {
 		if errors.Is(err, redis.Nil) {
 			return "", nil // wrap nil error
@@ -89,8 +97,8 @@ func (*cmdHash) HGet(ctx context.Context, key RedisKey, name string, keyAppend .
 }
 
 // HMGet 一次性获取多个hash指定key值
-func (*cmdHash) HMGet(ctx context.Context, key RedisKey, names []string, keyAppend ...interface{}) ([]string, error) {
-	cmd := hMGet(ctx, key, names, keyAppend...)
+func (*cmdHash) HMGet(key RedisKey, names []string, keyAppend ...interface{}) ([]string, error) {
+	cmd := hMGet(key, names, keyAppend...)
 	if err := cmd.Err(); err != nil {
 		return nil, err
 	}
@@ -111,8 +119,8 @@ func (*cmdHash) HMGet(ctx context.Context, key RedisKey, names []string, keyAppe
 }
 
 // HGetAll 获取指定key中所有数据
-func (*cmdHash) HGetAll(ctx context.Context, key RedisKey, keyAppend ...interface{}) (map[string]string, error) {
-	cmd := hGetAll(ctx, key, keyAppend...)
+func (*cmdHash) HGetAll(key RedisKey, keyAppend ...interface{}) (map[string]string, error) {
+	cmd := hGetAll(key, keyAppend...)
 	if err := cmd.Err(); err != nil {
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return nil, nil
@@ -120,25 +128,4 @@ func (*cmdHash) HGetAll(ctx context.Context, key RedisKey, keyAppend ...interfac
 		return nil, err
 	}
 	return cmd.Result()
-}
-
-// HSetAnyWithJson 设置Hash类型的值 json格式序列化
-func (*cmdHash) HSetAnyWithJson(ctx context.Context, key RedisKey, name string, value interface{}, keyAppend ...interface{}) error {
-	return hSet(ctx, key, []interface{}{name, json.ToJsonBytes(value)}, keyAppend...)
-}
-
-// HGetAnyWithJson 获取Hash类型的值 json格式反序列化
-func (*cmdHash) HGetAnyWithJson(ctx context.Context, key RedisKey, name string, value any, keyAppend ...interface{}) error {
-	cmd := hGet(ctx, key, name, keyAppend...)
-	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil // wrap nil error
-		}
-		return cmd.Err()
-	}
-	bytes, err := cmd.Bytes()
-	if err != nil {
-		return err
-	}
-	return json.ParseBytesError(bytes, value)
 }
