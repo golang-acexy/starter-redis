@@ -54,8 +54,18 @@ func (*cmdSet) SAdds(key RedisKey, value []interface{}, keyAppend ...interface{}
 	return sAdd(key, slice, keyAppend...)
 }
 
-// SRem 删除元素
-func (*cmdSet) SRem(key RedisKey, value []interface{}, keyAppend ...interface{}) (int64, error) {
+// SRem 删除单个元素
+func (*cmdSet) SRem(key RedisKey, value interface{}, keyAppend ...interface{}) (int64, error) {
+	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	cmd := redisClient.SRem(context.Background(), originKey, value)
+	if cmd.Err() != nil {
+		return 0, cmd.Err()
+	}
+	return cmd.Val(), nil
+}
+
+// SRems 删除多个元素
+func (*cmdSet) SRems(key RedisKey, value []interface{}, keyAppend ...interface{}) (int64, error) {
 	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
 	cmd := redisClient.SRem(context.Background(), originKey, value...)
 	if cmd.Err() != nil {

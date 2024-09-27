@@ -31,7 +31,16 @@ func (*cmdSortedSet) ZAdds(key RedisKey, member []redis.Z, keyAppend ...interfac
 }
 
 // ZRem 删除元素
-func (*cmdSortedSet) ZRem(key RedisKey, members []interface{}, keyAppend ...interface{}) (int64, error) {
+func (*cmdSortedSet) ZRem(key RedisKey, members interface{}, keyAppend ...interface{}) (int64, error) {
+	cmd := redisClient.ZRem(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), members)
+	if cmd.Err() != nil {
+		return 0, cmd.Err()
+	}
+	return cmd.Val(), nil
+}
+
+// ZRems 删除多个元素
+func (*cmdSortedSet) ZRems(key RedisKey, members []interface{}, keyAppend ...interface{}) (int64, error) {
 	cmd := redisClient.ZRem(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), members...)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()

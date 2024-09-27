@@ -58,7 +58,7 @@ func TestSetStruct(t *testing.T) {
 	fmt.Println(setCmd.SMembersScan(key, &structs))
 	fmt.Println(json.ToJson(structs))
 
-	fmt.Println(setCmd.SRem(key, []interface{}{&ObjectStruct{Name: "name", Age: 89}}))
+	fmt.Println(setCmd.SRem(key, &ObjectStruct{Name: "name", Age: 89}))
 	fmt.Println(setCmd.SMembersScan(key, &structs))
 
 }
