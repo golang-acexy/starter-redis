@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"github.com/acexy/golang-toolkit/math/random"
 	"github.com/acexy/golang-toolkit/util/json"
@@ -21,14 +20,6 @@ var standalone = &redisstarter.RedisStarter{
 		Addrs:    []string{":6379"},
 		Password: "tech-acexy",
 		DB:       0,
-	},
-	InitFunc: func(instance redis.UniversalClient) {
-		go func() {
-			for {
-				fmt.Println("test initFunc", json.ToJson(instance.PoolStats()))
-				time.Sleep(time.Second)
-			}
-		}()
 	},
 }
 
@@ -68,7 +59,7 @@ func TestStandalone(t *testing.T) {
 		for i := 1; i <= 5; i++ {
 			go func() {
 				for {
-					err := redisstarter.StringCmd().Set(context.Background(), redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
+					err := redisstarter.StringCmd().Set(redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -98,7 +89,7 @@ func TestCluster(t *testing.T) {
 		for i := 1; i <= 10; i++ {
 			go func() {
 				for {
-					err = redisstarter.StringCmd().Set(context.Background(), redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
+					err = redisstarter.StringCmd().Set(redisstarter.RedisKey{KeyFormat: random.RandString(5), Expire: time.Second * 10}, random.RandString(5))
 					if err != nil {
 						fmt.Println("invoke err", err)
 					}

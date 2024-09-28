@@ -28,13 +28,13 @@ type BloomInfo struct {
 }
 
 // Reserve 创建布隆过滤器
-func (*cmdBloom) Reserve(ctx context.Context, key RedisKey, errorRate float64, capacity int64, keyAppend ...interface{}) error {
-	return redisClient.Do(ctx, "BF.RESERVE", OriginKeyString(key.KeyFormat, keyAppend...), errorRate, capacity).Err()
+func (*cmdBloom) Reserve(key RedisKey, errorRate float64, capacity int64, keyAppend ...interface{}) error {
+	return redisClient.Do(context.Background(), "BF.RESERVE", OriginKeyString(key.KeyFormat, keyAppend...), errorRate, capacity).Err()
 }
 
 // Info 布隆过滤器信息
-func (*cmdBloom) Info(ctx context.Context, key RedisKey, keyAppend ...interface{}) (*BloomInfo, error) {
-	result, err := redisClient.Do(ctx, "BF.INFO", OriginKeyString(key.KeyFormat, keyAppend...)).Result()
+func (*cmdBloom) Info(key RedisKey, keyAppend ...interface{}) (*BloomInfo, error) {
+	result, err := redisClient.Do(context.Background(), "BF.INFO", OriginKeyString(key.KeyFormat, keyAppend...)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -52,33 +52,33 @@ func (*cmdBloom) Info(ctx context.Context, key RedisKey, keyAppend ...interface{
 }
 
 // Add 向布隆过滤器中添加元素
-func (*cmdBloom) Add(ctx context.Context, key RedisKey, value string, keyAppend ...interface{}) error {
-	return redisClient.Do(ctx, "BF.ADD", OriginKeyString(key.KeyFormat, keyAppend...), value).Err()
+func (*cmdBloom) Add(key RedisKey, value string, keyAppend ...interface{}) error {
+	return redisClient.Do(context.Background(), "BF.ADD", OriginKeyString(key.KeyFormat, keyAppend...), value).Err()
 }
 
 // MAdd 向布隆过滤器中批量添加元素
-func (*cmdBloom) MAdd(ctx context.Context, key RedisKey, values []string, keyAppend ...interface{}) error {
+func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...interface{}) error {
 	args := make([]interface{}, 0)
 	args = append(args, "BF.MADD")
 	args = append(args, OriginKeyString(key.KeyFormat, keyAppend...))
 	for _, v := range values {
 		args = append(args, v)
 	}
-	return redisClient.Do(ctx, args...).Err()
+	return redisClient.Do(context.Background(), args...).Err()
 }
 
 // Exists 检查元素是否存在
-func (*cmdBloom) Exists(ctx context.Context, key RedisKey, value string, keyAppend ...interface{}) (bool, error) {
-	return redisClient.Do(ctx, "BF.EXISTS", OriginKeyString(key.KeyFormat, keyAppend...), value).Bool()
+func (*cmdBloom) Exists(key RedisKey, value string, keyAppend ...interface{}) (bool, error) {
+	return redisClient.Do(context.Background(), "BF.EXISTS", OriginKeyString(key.KeyFormat, keyAppend...), value).Bool()
 }
 
 // MExists 检查多个元素是否存在
-func (*cmdBloom) MExists(ctx context.Context, key RedisKey, values []string, keyAppend ...interface{}) ([]bool, error) {
+func (*cmdBloom) MExists(key RedisKey, values []string, keyAppend ...interface{}) ([]bool, error) {
 	args := make([]interface{}, 0)
 	args = append(args, "BF.MEXISTS")
 	args = append(args, OriginKeyString(key.KeyFormat, keyAppend...))
 	for _, v := range values {
 		args = append(args, v)
 	}
-	return redisClient.Do(ctx, args...).BoolSlice()
+	return redisClient.Do(context.Background(), args...).BoolSlice()
 }

@@ -62,20 +62,19 @@ func TestMuxLockClient(t *testing.T) {
 
 func executable() {
 	time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
-	ctx := context.Background()
 
 	key1 := redisstarter.RedisKey{
 		KeyFormat: "redis-key",
 	}
 
 	var v int
-	err := redisstarter.StringCmd().GetAny(ctx, key1, &v)
+	err := redisstarter.StringCmd().GetAny(key1, &v)
 	if err != nil {
 		fmt.Println(err)
 	}
 	v += 1
 	fmt.Println("set ", v, "into redis")
-	err = redisstarter.StringCmd().SetAny(ctx, key1, v)
+	err = redisstarter.StringCmd().SetAny(key1, v)
 	if err != nil {
 		fmt.Println(err)
 	}

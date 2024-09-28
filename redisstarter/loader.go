@@ -18,6 +18,18 @@ type RedisKey struct {
 	Expire    time.Duration
 }
 
+// NewRedisKey 创建一个RedisKey
+// keyFormat 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
+func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
+	key := RedisKey{
+		KeyFormat: keyFormat,
+	}
+	if len(expire) > 0 {
+		key.Expire = expire[0]
+	}
+	return key
+}
+
 type RedisStarter struct {
 	RedisConfig     redis.UniversalOptions
 	LazyRedisConfig func() redis.UniversalOptions

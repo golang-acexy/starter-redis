@@ -3,7 +3,6 @@ package redisstarter
 import (
 	"context"
 	"errors"
-	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,33 +15,35 @@ func SetCmd() *cmdSet {
 	return setCmd
 }
 
-func sAdd(ctx context.Context, key RedisKey, value []interface{}, keyAppend ...interface{}) error {
+func sAdd(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if value == nil {
 		return errors.New("nil value")
 	}
 	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
-	cmd := redisClient.SAdd(ctx, originKey, value...)
+	cmd := redisClient.SAdd(context.Background(), originKey, value...)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
 	if key.Expire > 0 {
-		keyCmd.Expire(ctx, originKey, key.Expire)
+		if keyCmd.Ttl(key, keyAppend...) < 0 {
+			keyCmd.Expire(key, key.Expire, keyAppend...)
+		}
 	}
 	return nil
 }
 
-func sMembers(ctx context.Context, key RedisKey, keyAppend ...interface{}) (*redis.StringSliceCmd, error) {
-	cmd := redisClient.SMembers(ctx, OriginKeyString(key.KeyFormat, keyAppend...))
-	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return cmd, nil // wrap nil error
-		}
-		return nil, cmd.Err()
-	}
-	return cmd, nil
+func sRem(key RedisKey, value []interface{}, keyAppend ...interface{}) *redis.IntCmd {
+	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	return redisClient.SRem(context.Background(), originKey, value...)
 }
 
-func (*cmdSet) SAdd(ctx context.Context, key RedisKey, value []string, keyAppend ...interface{}) error {
+// SAdd 增加单个元素
+func (*cmdSet) SAdd(key RedisKey, value interface{}, keyAppend ...interface{}) error {
+	return sAdd(key, []interface{}{value}, keyAppend...)
+}
+
+// SAdds 增加多个元素
+func (*cmdSet) SAdds(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if len(value) == 0 {
 		return errors.New("nil value")
 	}
@@ -50,26 +51,32 @@ func (*cmdSet) SAdd(ctx context.Context, key RedisKey, value []string, keyAppend
 	for i, v := range value {
 		slice[i] = v
 	}
-	return sAdd(ctx, key, slice, keyAppend...)
+	return sAdd(key, slice, keyAppend...)
 }
 
-func (*cmdSet) SAddBytes(ctx context.Context, key RedisKey, value []byte, keyAppend ...interface{}) error {
-	if len(value) == 0 {
-		return errors.New("nil value")
+// SRem 删除单个元素
+func (*cmdSet) SRem(key RedisKey, value interface{}, keyAppend ...interface{}) (int64, error) {
+	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	cmd := redisClient.SRem(context.Background(), originKey, value)
+	if cmd.Err() != nil {
+		return 0, cmd.Err()
 	}
-	slice := make([]interface{}, len(value))
-	for i, v := range value {
-		b, e := json.ToJsonBytesError(v)
-		if e != nil {
-			return e
-		}
-		slice[i] = b
-	}
-	return sAdd(ctx, key, slice, keyAppend...)
+	return cmd.Val(), nil
 }
 
-func (*cmdSet) SCard(ctx context.Context, key RedisKey, keyAppend ...interface{}) (int64, error) {
-	cmd := redisClient.SCard(ctx, OriginKeyString(key.KeyFormat, keyAppend...))
+// SRems 删除多个元素
+func (*cmdSet) SRems(key RedisKey, value []interface{}, keyAppend ...interface{}) (int64, error) {
+	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	cmd := redisClient.SRem(context.Background(), originKey, value...)
+	if cmd.Err() != nil {
+		return 0, cmd.Err()
+	}
+	return cmd.Val(), nil
+}
+
+// SCard 获取集合元素个数
+func (*cmdSet) SCard(key RedisKey, keyAppend ...interface{}) (int64, error) {
+	cmd := redisClient.SCard(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return 0, nil // wrap nil error
@@ -79,23 +86,38 @@ func (*cmdSet) SCard(ctx context.Context, key RedisKey, keyAppend ...interface{}
 	return cmd.Val(), nil
 }
 
-func (*cmdSet) SMembers(ctx context.Context, key RedisKey, keyAppend ...interface{}) ([]string, error) {
-	cmd, err := sMembers(ctx, key, keyAppend...)
-	if err != nil {
-		return nil, err
+// SMembers 获取集合元素
+func (*cmdSet) SMembers(key RedisKey, keyAppend ...interface{}) ([]string, error) {
+	cmd := redisClient.SMembers(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	if cmd.Err() != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil, nil // wrap nil error
+		}
+		return nil, cmd.Err()
 	}
 	return cmd.Val(), nil
 }
 
-func (*cmdSet) SMembersBytes(ctx context.Context, key RedisKey, keyAppend ...interface{}) ([]*byte, error) {
-	cmd, err := sMembers(ctx, key, keyAppend...)
-	if err != nil {
-		return nil, err
+// SMembersScan 获取集合元素
+func (*cmdSet) SMembersScan(key RedisKey, value interface{}, keyAppend ...interface{}) error {
+	cmd := redisClient.SMembers(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	if cmd.Err() != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil // wrap nil error
+		}
+		return cmd.Err()
 	}
-	bytes := new([]*byte)
-	err = cmd.ScanSlice(bytes)
-	if err != nil {
-		return nil, err
+	return cmd.ScanSlice(value)
+}
+
+// SMembersMap 获取集合元素 作用是通过map key去重复
+func (*cmdSet) SMembersMap(key RedisKey, keyAppend ...interface{}) (map[string]struct{}, error) {
+	cmd := redisClient.SMembersMap(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	if cmd.Err() != nil {
+		if errors.Is(cmd.Err(), redis.Nil) {
+			return nil, nil // wrap nil error
+		}
+		return nil, cmd.Err()
 	}
-	return *bytes, nil
+	return cmd.Val(), nil
 }
