@@ -34,8 +34,8 @@ type RedisStarter struct {
 	RedisConfig     redis.UniversalOptions
 	LazyRedisConfig func() redis.UniversalOptions
 
-	RedisSetting *parent.Setting
 	InitFunc     func(instance redis.UniversalClient)
+	RedisSetting *parent.Setting
 }
 
 func (r *RedisStarter) Setting() *parent.Setting {
