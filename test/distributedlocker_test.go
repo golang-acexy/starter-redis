@@ -20,7 +20,7 @@ func TestTryLock(t *testing.T) {
 }
 
 func tryLock(k string, i *int) {
-	err := redisstarter.TryLock(k, time.Minute, func() {
+	err := redisstarter.TryLock(redisstarter.NewRedisKey("tryLock", time.Second), func() {
 		*i = *i + 1
 		fmt.Println(*i)
 	})
@@ -31,7 +31,7 @@ func tryLock(k string, i *int) {
 }
 
 func lock(ctx context.Context, key string, i *int) {
-	err := redisstarter.LockWithDeadline(ctx, key, time.Minute, time.Now().Add(time.Minute), 200, func() {
+	err := redisstarter.LockWithDeadline(ctx, redisstarter.NewRedisKey("key", time.Minute), time.Now().Add(time.Minute), 200, func() {
 		*i = *i + 1
 		time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
 		fmt.Println(*i)
@@ -89,7 +89,7 @@ func TestDistributedLock(t *testing.T) {
 	key := "distributed-key"
 	for i := 0; i < 100; i++ {
 		go func() {
-			err := redisstarter.LockWithDeadline(context.Background(), key, time.Minute, time.Now().Add(time.Minute*5), 200, executable)
+			err := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), time.Now().Add(time.Minute*5), 200, executable)
 			if err != nil {
 				fmt.Printf("%+v %s \n", err, key)
 				return
