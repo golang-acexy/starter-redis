@@ -5,7 +5,7 @@ go 1.21.0
 toolchain go1.21.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.38
+	github.com/acexy/golang-toolkit v0.0.39
 	github.com/bsm/redislock v0.9.4
 	github.com/golang-acexy/starter-parent v0.1.12
 	github.com/redis/go-redis/v9 v9.7.0
