@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
-	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/acexy/golang-toolkit/util/gob"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -86,9 +86,9 @@ func (*cmdString) SetAny(key RedisKey, value interface{}, keyAppend ...interface
 }
 
 // SetAnyWithJson 设置其他类型值
-// 设置任何类型，将被以json格式进行编码存储
+// 设置任何类型
 func (*cmdString) SetAnyWithJson(key RedisKey, value any, keyAppend ...interface{}) error {
-	bytes, err := json.ToJsonBytesError(value)
+	bytes, err := gob.Encode(value)
 	if err != nil {
 		return err
 	}
@@ -278,5 +278,5 @@ func (t *cmdString) GetAnyWithJson(key RedisKey, value any, keyAppend ...interfa
 	if err != nil {
 		return err
 	}
-	return json.ParseBytesError(bytes, value)
+	return gob.Decode(bytes, value)
 }

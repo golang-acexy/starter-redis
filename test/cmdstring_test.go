@@ -22,6 +22,7 @@ func TestSetCmd(t *testing.T) {
 
 type User struct {
 	Name string
+	Age  int
 }
 
 func (u *User) MarshalBinary() (data []byte, err error) {

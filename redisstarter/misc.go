@@ -27,8 +27,8 @@ func (c *cmdTopic) Publish(key RedisKey, data string, keyAppend ...interface{}) 
 // Subscribe 订阅消费Topic
 func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...interface{}) (<-chan *redis.Message, error) {
 	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
-	pubSub := redisClient.Subscribe(context.Background(), keyString)
-	_, err := pubSub.Receive(context.Background())
+	pubSub := redisClient.Subscribe(ctx, keyString)
+	_, err := pubSub.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}

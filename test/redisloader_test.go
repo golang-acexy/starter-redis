@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const isCluster = false
+const isCluster = true
 
 var loader *parent.StarterLoader
 

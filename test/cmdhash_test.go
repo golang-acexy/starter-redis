@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
@@ -45,4 +46,16 @@ func TestHGetAll(t *testing.T) {
 		KeyFormat: "key-m-hash",
 	}
 	fmt.Println(hashType.HGetAll(key))
+}
+
+func TestHSetAny(t *testing.T) {
+	hashType := redisstarter.HashCmd()
+	key := redisstarter.RedisKey{
+		KeyFormat: "key-m-hash",
+	}
+	u1 := User{Name: "张三1", Age: 18}
+	fmt.Println(hashType.HSetAny(key, "1", u1))
+	var u User
+	fmt.Println(hashType.HGetAny(key, "1", &u))
+	fmt.Println(json.ToJson(u))
 }
