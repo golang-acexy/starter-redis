@@ -3,6 +3,7 @@ package redisstarter
 import (
 	"context"
 	"errors"
+	"github.com/acexy/golang-toolkit/util/gob"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -71,6 +72,28 @@ func (*cmdHash) HSet(key RedisKey, name, value string, keyAppend ...interface{})
 	return hSet(key, []interface{}{name, value}, keyAppend...)
 }
 
+// HSetAny 设置Hash类型的值 任何值类型
+func (*cmdHash) HSetAny(key RedisKey, name string, value interface{}, keyAppend ...interface{}) error {
+	encode, err := gob.Encode(value)
+	if err != nil {
+		return err
+	}
+	return hSet(key, []interface{}{name, encode}, keyAppend...)
+}
+
+// HGetAny 获取Hash指定key值 任何值类型
+func (*cmdHash) HGetAny(key RedisKey, name string, result interface{}, keyAppend ...interface{}) error {
+	cmd := hGet(key, name, keyAppend...)
+	if cmd.Err() != nil {
+		return cmd.Err()
+	}
+	bytes, err := cmd.Bytes()
+	if err != nil {
+		return err
+	}
+	return gob.Decode(bytes, result)
+}
+
 // HMSet 一次性设置多个Hash类型的值
 func (*cmdHash) HMSet(key RedisKey, data map[string]string, keyAppend ...interface{}) error {
 	array := make([]interface{}, len(data)*2)
@@ -79,6 +102,23 @@ func (*cmdHash) HMSet(key RedisKey, data map[string]string, keyAppend ...interfa
 		array[index] = k
 		index++
 		array[index] = v
+		index++
+	}
+	return hMSet(key, array, keyAppend...)
+}
+
+// HMSetAny 一次性设置多个Hash类型的值 任意值类型
+func (*cmdHash) HMSetAny(key RedisKey, data map[string]interface{}, keyAppend ...interface{}) error {
+	array := make([]interface{}, len(data)*2)
+	index := 0
+	for k, v := range data {
+		array[index] = k
+		index++
+		b, err := gob.Encode(v)
+		if err != nil {
+			return err
+		}
+		array[index] = b
 		index++
 	}
 	return hMSet(key, array, keyAppend...)
