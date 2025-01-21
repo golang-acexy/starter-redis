@@ -15,7 +15,7 @@ type RedisKey struct {
 
 	// 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
 	KeyFormat string
-	// Key 过期时间(如果可以设置) 当该RedisKey作用与Locker时，该时间用于自动释放锁时间
+	// Key 过期时间(如果可以设置) 当该RedisKey作用与Locker时，该时间指明了自动释放锁时间 如果为零值则会立即失败
 	Expire time.Duration
 }
 
