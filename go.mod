@@ -1,14 +1,12 @@
 module github.com/golang-acexy/starter-redis
 
-go 1.21.0
-
-toolchain go1.21.5
+go 1.23.5
 
 require (
-	github.com/acexy/golang-toolkit v0.0.40
+	github.com/acexy/golang-toolkit v0.0.42
 	github.com/bsm/redislock v0.9.4
-	github.com/golang-acexy/starter-parent v0.1.12
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/golang-acexy/starter-parent v0.1.13
+	github.com/redis/go-redis/v9 v9.7.1
 )
 
 require (
@@ -18,6 +16,6 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/timandy/routine v1.1.4 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
