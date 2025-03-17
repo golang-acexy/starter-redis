@@ -85,9 +85,9 @@ func (*cmdString) SetAny(key RedisKey, value interface{}, keyAppend ...interface
 	return set(key, value, keyAppend...)
 }
 
-// SetAnyWithJson 设置其他类型值
+// SetAnyWithGob 设置其他类型值
 // 设置任何类型
-func (*cmdString) SetAnyWithJson(key RedisKey, value any, keyAppend ...interface{}) error {
+func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...interface{}) error {
 	bytes, err := gob.Encode(value)
 	if err != nil {
 		return err
@@ -272,8 +272,8 @@ func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...interface{}) erro
 	return cmd.Scan(value)
 }
 
-// GetAnyWithJson 以Json反序列化形式获取指定值
-func (t *cmdString) GetAnyWithJson(key RedisKey, value any, keyAppend ...interface{}) error {
+// GetAnyWithGob 以Gob反序列化形式获取指定值
+func (t *cmdString) GetAnyWithGob(key RedisKey, value any, keyAppend ...interface{}) error {
 	bytes, err := t.GetBytes(key, keyAppend...)
 	if err != nil {
 		return err
