@@ -12,9 +12,13 @@ func TestSetCmd(t *testing.T) {
 
 	key1 := redisstarter.RedisKey{
 		KeyFormat: "string:%d:%s",
-		Expire:    time.Second,
+		Expire:    time.Second * 100,
 	}
-	_ = stringType.Set(key1, "你好", 1, "2")
+	err := stringType.Set(key1, "你好", 1, "2")
+	if err != nil {
+		println(err)
+		return
+	}
 	fmt.Println(stringType.Get(key1, 1, "2"))
 	time.Sleep(time.Second * 2)
 	fmt.Println(stringType.Get(key1, 1, "2"))
@@ -57,21 +61,26 @@ func TestSetAny(t *testing.T) {
 	fmt.Printf("%v\n", result)
 }
 
+type EmailBizToken struct {
+	EmailToken string `json:"token"`
+	Email      string `json:"email"`
+}
+
 func TestSetJson(t *testing.T) {
 	stringType := redisstarter.StringCmd()
 	key := redisstarter.RedisKey{
-		KeyFormat: "json",
+		KeyFormat: "json:%s",
 	}
 
-	value := &Person{Name: "李四"}
-	err := stringType.SetAnyWithJson(key, value)
+	value := EmailBizToken{Email: "a@b.c", EmailToken: "1234567890..."}
+	err := stringType.SetAnyWithGob(key, value, "1")
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
 	}
 
 	result := Person{}
-	fmt.Println(stringType.GetAnyWithJson(key, &result))
+	fmt.Println(stringType.GetAnyWithGob(key, &result))
 	fmt.Printf("%v\n", result)
 
 }
