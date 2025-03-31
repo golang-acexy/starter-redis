@@ -20,7 +20,7 @@ func hSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if value == nil {
 		return errors.New("nil value")
 	}
-	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	originKey := key.RawKeyString(keyAppend...)
 	cmd := redisClient.HSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -37,7 +37,7 @@ func hMSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if len(value) == 0 {
 		return errors.New("nil value")
 	}
-	originKey := OriginKeyString(key.KeyFormat, keyAppend...)
+	originKey := key.RawKeyString(keyAppend...)
 	cmd := redisClient.HMSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -51,20 +51,20 @@ func hMSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 }
 
 func hGet(key RedisKey, name string, keyAppend ...interface{}) *redis.StringCmd {
-	return redisClient.HGet(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), name)
+	return redisClient.HGet(context.Background(), key.RawKeyString(keyAppend...), name)
 }
 
 func hMGet(key RedisKey, names []string, keyAppend ...interface{}) *redis.SliceCmd {
-	return redisClient.HMGet(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), names...)
+	return redisClient.HMGet(context.Background(), key.RawKeyString(keyAppend...), names...)
 }
 
 func hGetAll(key RedisKey, keyAppend ...interface{}) *redis.MapStringStringCmd {
-	return redisClient.HGetAll(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	return redisClient.HGetAll(context.Background(), key.RawKeyString(keyAppend...))
 }
 
 // HExists 判断Hash类型是否存在key
 func (*cmdHash) HExists(key RedisKey, name string, keyAppend ...interface{}) bool {
-	return redisClient.HExists(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), name).Val()
+	return redisClient.HExists(context.Background(), key.RawKeyString(keyAppend...), name).Val()
 }
 
 // HSet 设置Hash类型的值

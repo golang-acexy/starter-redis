@@ -3,7 +3,6 @@ package redisstarter
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/gob"
 	"github.com/redis/go-redis/v9"
@@ -18,18 +17,11 @@ func StringCmd() *cmdString {
 	return stringCmd
 }
 
-func OriginKeyString(keyFormat string, keyAppend ...interface{}) string {
-	if len(keyAppend) > 0 {
-		return fmt.Sprintf(keyFormat, keyAppend...)
-	}
-	return keyFormat
-}
-
 func set(key RedisKey, value interface{}, keyAppend ...interface{}) error {
 	if value == nil {
 		return errors.New("nil value")
 	}
-	status := redisClient.Set(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), value, key.Expire)
+	status := redisClient.Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -47,7 +39,7 @@ func mset(data []interface{}) error {
 }
 
 func get(key RedisKey, keyAppend ...interface{}) (*redis.StringCmd, error) {
-	cmd := redisClient.Get(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	cmd := redisClient.Get(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return nil, nil // wrap nil error

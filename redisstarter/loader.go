@@ -2,6 +2,7 @@ package redisstarter
 
 import (
 	"context"
+	"fmt"
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/redis/go-redis/v9"
@@ -29,6 +30,14 @@ func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
 		key.Expire = expire[0]
 	}
 	return key
+}
+
+// RawKeyString 获取原始key字符串
+func (r RedisKey) RawKeyString(keyAppend ...interface{}) string {
+	if len(keyAppend) > 0 {
+		return fmt.Sprintf(r.KeyFormat, keyAppend...)
+	}
+	return r.KeyFormat
 }
 
 type RedisStarter struct {

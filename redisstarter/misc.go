@@ -20,13 +20,13 @@ func TopicCmd() *cmdTopic {
 
 // Publish 发送消息
 func (c *cmdTopic) Publish(key RedisKey, data string, keyAppend ...interface{}) error {
-	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
+	keyString := key.RawKeyString(keyAppend...)
 	return redisClient.Publish(context.Background(), keyString, data).Err()
 }
 
 // Subscribe 订阅消费Topic
 func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...interface{}) (<-chan *redis.Message, error) {
-	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
+	keyString := key.RawKeyString(keyAppend...)
 	pubSub := redisClient.Subscribe(ctx, keyString)
 	_, err := pubSub.Receive(ctx)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...int
 
 // Unsubscribe 取消订阅Topic
 func (c *cmdTopic) Unsubscribe(key RedisKey, keyAppend ...interface{}) error {
-	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
+	keyString := key.RawKeyString(keyAppend...)
 	defer c.pubSubMutex.Unlock()
 	c.pubSubMutex.Lock()
 	if c.pubSub == nil {
