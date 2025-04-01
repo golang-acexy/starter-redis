@@ -256,6 +256,7 @@ func (*cmdString) GetBytes(key RedisKey, keyAppend ...interface{}) ([]byte, erro
 }
 
 // GetAny 以指定类型获取指定值
+// 适用于设置基本类型 或 该值类型需要实现BinaryUnmarshaler的复杂结构体
 func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...interface{}) error {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
