@@ -40,21 +40,38 @@ func (r RedisKey) RawKeyString(keyAppend ...interface{}) string {
 	return r.KeyFormat
 }
 
-type RedisStarter struct {
-	RedisConfig     redis.UniversalOptions
-	LazyRedisConfig func() redis.UniversalOptions
+type RedisConfig struct {
+	redis.UniversalOptions
+	InitFunc func(instance redis.UniversalClient)
+}
 
-	InitFunc     func(instance redis.UniversalClient)
+type RedisStarter struct {
+	Config       RedisConfig
+	LazyConfig   func() RedisConfig
+	config       *RedisConfig
 	RedisSetting *parent.Setting
 }
 
+func (r *RedisStarter) getConfig() *RedisConfig {
+	if r.config == nil {
+		var config RedisConfig
+		if r.LazyConfig != nil {
+			config = r.LazyConfig()
+		} else {
+			config = r.Config
+		}
+		r.config = &config
+	}
+	return r.config
+}
 func (r *RedisStarter) Setting() *parent.Setting {
 	if r.RedisSetting != nil {
 		return r.RedisSetting
 	}
+	config := r.getConfig()
 	return parent.NewSetting("Redis-Starter", 19, true, time.Second*10, func(instance interface{}) {
-		if r.InitFunc != nil {
-			r.InitFunc(instance.(redis.UniversalClient))
+		if config.InitFunc != nil {
+			config.InitFunc(instance.(redis.UniversalClient))
 		}
 	})
 }
@@ -77,10 +94,8 @@ func (r *RedisStarter) closedAllConn() bool {
 }
 
 func (r *RedisStarter) Start() (interface{}, error) {
-	if r.LazyRedisConfig != nil {
-		r.RedisConfig = r.LazyRedisConfig()
-	}
-	redisClient = redis.NewUniversalClient(&r.RedisConfig)
+	config := r.getConfig()
+	redisClient = redis.NewUniversalClient(&config.UniversalOptions)
 	if err := r.ping(); err != nil {
 		return nil, err
 	}
