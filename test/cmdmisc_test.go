@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/acexy/golang-toolkit/sys"
 	"github.com/golang-acexy/starter-redis/redisstarter"
 	"sync"
 	"testing"
@@ -77,6 +78,21 @@ func TestSubscribeTopicStopWithContext(t *testing.T) {
 
 	wg.Wait()
 	fmt.Println("所有订阅均取消")
+}
+
+func TestSubscribeClose(t *testing.T) {
+	cmd := redisstarter.TopicCmd()
+	key1 := redisstarter.RedisKey{
+		KeyFormat: "topic",
+	}
+	_, err := cmd.Subscribe(context.Background(), key1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	time.Sleep(time.Second)
+	loader.StopBySetting()
+	sys.ShutdownHolding()
 }
 
 func TestSubscribeTopicStopWithUnsubscribe(t *testing.T) {

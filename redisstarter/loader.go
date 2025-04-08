@@ -3,7 +3,6 @@ package redisstarter
 import (
 	"context"
 	"fmt"
-	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/redis/go-redis/v9"
@@ -105,18 +104,19 @@ func (r *RedisStarter) Start() (interface{}, error) {
 }
 
 func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	subs := topicCmd.pubSubs
+	if len(subs) > 0 {
+		for k, v := range subs {
+			_ = v.Unsubscribe(context.Background(), k)
+			_ = v.Close()
+		}
+	}
 	err = redisClient.Close()
 	if err != nil {
 		if pingErr := r.ping(); pingErr != nil {
 			stopped = true
 		}
 		return
-	}
-	subs := topicCmd.pubSubs
-	if len(subs) > 0 {
-		coll.MapForeachAll(subs, func(key string, sub *redis.PubSub) {
-			_ = sub.Unsubscribe(context.Background(), key)
-		})
 	}
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	go func() {

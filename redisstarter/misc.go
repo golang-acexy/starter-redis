@@ -41,9 +41,10 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...int
 	pubSub := redisClient.Subscribe(ctx, keyString)
 	_, err := pubSub.Receive(ctx)
 	if err != nil {
+		_ = pubSub.Close() // 确保接收失败时关闭连接
 		return nil, err
 	}
-
+	println(pubSub)
 	c.pubSubs[keyString] = pubSub
 	return pubSub.Channel(), nil
 }
@@ -63,7 +64,6 @@ func SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.M
 			}
 			handle(msg)
 		}
-
 		// 清理原订阅
 		_ = TopicCmd().Unsubscribe(topicKey)
 	}
@@ -72,15 +72,12 @@ func SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.M
 // Unsubscribe 取消订阅并释放连接
 func (c *cmdTopic) Unsubscribe(key RedisKey, keyAppend ...interface{}) error {
 	keyString := key.RawKeyString(keyAppend...)
-
 	c.pubSubsMutex.Lock()
 	defer c.pubSubsMutex.Unlock()
-
 	pubSub, ok := c.pubSubs[keyString]
 	if !ok {
 		return errors.New("not subscribed to topic: " + keyString)
 	}
-
 	err := pubSub.Unsubscribe(context.Background(), keyString)
 	_ = pubSub.Close()
 	delete(c.pubSubs, keyString)
