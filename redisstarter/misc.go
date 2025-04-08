@@ -44,29 +44,30 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...int
 		_ = pubSub.Close() // 确保接收失败时关闭连接
 		return nil, err
 	}
-	println(pubSub)
 	c.pubSubs[keyString] = pubSub
 	return pubSub.Channel(), nil
 }
 
 // SubscribeRetry 订阅消息（重试连接）
-func SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.Message)) {
-	for {
-		ch, err := TopicCmd().Subscribe(ctx, topicKey)
-		if err != nil {
-			// 订阅失败，等待重试
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		for msg := range ch {
-			if msg == nil {
-				break // channel 被关闭，跳出重连
+func (c *cmdTopic) SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.Message)) {
+	go func() {
+		for {
+			ch, err := c.Subscribe(ctx, topicKey)
+			if err != nil {
+				// 订阅失败，等待重试
+				time.Sleep(5 * time.Second)
+				continue
 			}
-			handle(msg)
+			for msg := range ch {
+				if msg == nil {
+					break // channel 被关闭，跳出重连
+				}
+				handle(msg)
+			}
+			// 清理原订阅
+			_ = c.Unsubscribe(topicKey)
 		}
-		// 清理原订阅
-		_ = TopicCmd().Unsubscribe(topicKey)
-	}
+	}()
 }
 
 // Unsubscribe 取消订阅并释放连接

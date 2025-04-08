@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/acexy/golang-toolkit/sys"
 	"github.com/golang-acexy/starter-redis/redisstarter"
+	"github.com/redis/go-redis/v9"
 	"sync"
 	"testing"
 	"time"
@@ -93,6 +94,19 @@ func TestSubscribeClose(t *testing.T) {
 	time.Sleep(time.Second)
 	loader.StopBySetting()
 	sys.ShutdownHolding()
+}
+
+func TestSubscribeRetry(t *testing.T) {
+	cmd := redisstarter.TopicCmd()
+	key1 := redisstarter.RedisKey{
+		KeyFormat: "topic",
+	}
+	cmd.SubscribeRetry(context.Background(), key1, func(message *redis.Message) {
+		fmt.Println(message)
+	})
+	//time.Sleep(time.Second)
+	//loader.StopBySetting()
+	//cmd.Unsubscribe(key1)
 }
 
 func TestSubscribeTopicStopWithUnsubscribe(t *testing.T) {
