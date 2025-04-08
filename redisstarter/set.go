@@ -78,9 +78,6 @@ func (*cmdSet) SRems(key RedisKey, value []interface{}, keyAppend ...interface{}
 func (*cmdSet) SCard(key RedisKey, keyAppend ...interface{}) (int64, error) {
 	cmd := redisClient.SCard(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return 0, nil // wrap nil error
-		}
 		return 0, cmd.Err()
 	}
 	return cmd.Val(), nil
@@ -90,9 +87,6 @@ func (*cmdSet) SCard(key RedisKey, keyAppend ...interface{}) (int64, error) {
 func (*cmdSet) SMembers(key RedisKey, keyAppend ...interface{}) ([]string, error) {
 	cmd := redisClient.SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil, nil // wrap nil error
-		}
 		return nil, cmd.Err()
 	}
 	return cmd.Val(), nil
@@ -102,9 +96,6 @@ func (*cmdSet) SMembers(key RedisKey, keyAppend ...interface{}) ([]string, error
 func (*cmdSet) SMembersScan(key RedisKey, value interface{}, keyAppend ...interface{}) error {
 	cmd := redisClient.SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil // wrap nil error
-		}
 		return cmd.Err()
 	}
 	return cmd.ScanSlice(value)
@@ -114,9 +105,6 @@ func (*cmdSet) SMembersScan(key RedisKey, value interface{}, keyAppend ...interf
 func (*cmdSet) SMembersMap(key RedisKey, keyAppend ...interface{}) (map[string]struct{}, error) {
 	cmd := redisClient.SMembersMap(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil, nil // wrap nil error
-		}
 		return nil, cmd.Err()
 	}
 	return cmd.Val(), nil

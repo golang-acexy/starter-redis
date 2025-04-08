@@ -41,9 +41,6 @@ func mset(data []interface{}) error {
 func get(key RedisKey, keyAppend ...interface{}) (*redis.StringCmd, error) {
 	cmd := redisClient.Get(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil, nil // wrap nil error
-		}
 		return nil, cmd.Err()
 	}
 	return cmd, nil
@@ -53,9 +50,6 @@ func mget(keys ...string) (*redis.SliceCmd, error) {
 	slice := redisClient.MGet(context.Background(), keys...)
 	err := slice.Err()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return nil, nil // wrap nil error
-		}
 		return nil, err
 	}
 	return slice, nil

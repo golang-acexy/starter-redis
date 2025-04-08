@@ -128,9 +128,6 @@ func (*cmdHash) HMSetAny(key RedisKey, data map[string]interface{}, keyAppend ..
 func (*cmdHash) HGet(key RedisKey, name string, keyAppend ...interface{}) (string, error) {
 	cmd := hGet(key, name, keyAppend...)
 	if err := cmd.Err(); err != nil {
-		if errors.Is(err, redis.Nil) {
-			return "", nil // wrap nil error
-		}
 		return "", err
 	}
 	return cmd.Val(), nil
@@ -144,9 +141,6 @@ func (*cmdHash) HMGet(key RedisKey, names []string, keyAppend ...interface{}) ([
 	}
 	result, err := cmd.Result()
 	if err != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil, nil // wrap nil error
-		}
 		return nil, err
 	}
 	m := make([]string, len(result))
@@ -162,9 +156,6 @@ func (*cmdHash) HMGet(key RedisKey, names []string, keyAppend ...interface{}) ([
 func (*cmdHash) HGetAll(key RedisKey, keyAppend ...interface{}) (map[string]string, error) {
 	cmd := hGetAll(key, keyAppend...)
 	if err := cmd.Err(); err != nil {
-		if errors.Is(cmd.Err(), redis.Nil) {
-			return nil, nil
-		}
 		return nil, err
 	}
 	return cmd.Result()
