@@ -62,7 +62,7 @@ func TryAndGetLocker(key RedisKey, keyAppend ...interface{}) (*Locker, error) {
 
 // TryLockWithContext 尝试获取锁并执行executable函数
 func TryLockWithContext(ctx context.Context, key RedisKey, executable func(), keyAppend ...interface{}) (error, <-chan struct{}) {
-	redisLock, err := distributedLocker().Obtain(ctx, OriginKeyString(key.KeyFormat, keyAppend...), key.Expire, nil)
+	redisLock, err := distributedLocker().Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, nil)
 	if err != nil {
 		return err, nil
 	}
@@ -80,7 +80,7 @@ func TryLockWithContext(ctx context.Context, key RedisKey, executable func(), ke
 
 // TryAndGetLockerWithContext 尝试获取锁并返回Locker
 func TryAndGetLockerWithContext(ctx context.Context, key RedisKey, keyAppend ...interface{}) (*Locker, error) {
-	redisLock, err := distributedLocker().Obtain(ctx, OriginKeyString(key.KeyFormat, keyAppend...), key.Expire, nil)
+	redisLock, err := distributedLocker().Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func TryAndGetLockerWithContext(ctx context.Context, key RedisKey, keyAppend ...
 //	intervalMil 重试间隔(millisecond)
 func LockWithMaxRetry(ctx context.Context, key RedisKey, retryMax, retryInterval int, executable func(), keyAppend ...interface{}) (error, <-chan struct{}) {
 	retry := redislock.LimitRetry(redislock.LinearBackoff(time.Duration(retryInterval)*time.Millisecond), retryMax)
-	return lock(ctx, OriginKeyString(key.KeyFormat, keyAppend...), key.Expire, executable, retry)
+	return lock(ctx, key.RawKeyString(keyAppend...), key.Expire, executable, retry)
 }
 
 // LockWithDeadline 持续尝试获取锁
@@ -108,5 +108,5 @@ func LockWithDeadline(ctx context.Context, key RedisKey, retryDeadline time.Time
 	retry := redislock.LinearBackoff(time.Duration(retryInterval) * time.Millisecond)
 	lockCtx, cancel := context.WithDeadline(ctx, retryDeadline)
 	defer cancel()
-	return lock(lockCtx, OriginKeyString(key.KeyFormat, keyAppend...), key.Expire, executable, retry)
+	return lock(lockCtx, key.RawKeyString(keyAppend...), key.Expire, executable, retry)
 }

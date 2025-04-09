@@ -19,7 +19,7 @@ func ListCmd() *cmdList {
 
 // LLen 获取队列长度
 func (*cmdList) LLen(key RedisKey, keyAppend ...interface{}) int64 {
-	result := redisClient.LLen(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...))
+	result := redisClient.LLen(context.Background(), key.RawKeyString(keyAppend...))
 	if result.Err() != nil {
 		return 0
 	}
@@ -29,16 +29,16 @@ func (*cmdList) LLen(key RedisKey, keyAppend ...interface{}) int64 {
 // Push 数据入队
 func (*cmdList) Push(directionRight bool, key RedisKey, data string, keyAppend ...interface{}) error {
 	if directionRight {
-		return redisClient.RPush(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
+		return redisClient.RPush(context.Background(), key.RawKeyString(keyAppend...), data).Err()
 	}
-	return redisClient.LPush(context.Background(), OriginKeyString(key.KeyFormat, keyAppend...), data).Err()
+	return redisClient.LPush(context.Background(), key.RawKeyString(keyAppend...), data).Err()
 }
 
 // BPop 数据出队
 // directionRight: true 从右出，false 从左出
 // timeout: 向队列获取数据的最大等待时间，0 为永久阻塞
 func (*cmdList) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...interface{}) <-chan string {
-	keyString := OriginKeyString(key.KeyFormat, keyAppend...)
+	keyString := key.RawKeyString(keyAppend...)
 	c := make(chan string)
 	go func() {
 		defer close(c)

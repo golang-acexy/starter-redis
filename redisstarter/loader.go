@@ -2,6 +2,7 @@ package redisstarter
 
 import (
 	"context"
+	"fmt"
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/redis/go-redis/v9"
@@ -31,21 +32,46 @@ func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
 	return key
 }
 
-type RedisStarter struct {
-	RedisConfig     redis.UniversalOptions
-	LazyRedisConfig func() redis.UniversalOptions
+// RawKeyString 获取原始key字符串
+func (r RedisKey) RawKeyString(keyAppend ...interface{}) string {
+	if len(keyAppend) > 0 {
+		return fmt.Sprintf(r.KeyFormat, keyAppend...)
+	}
+	return r.KeyFormat
+}
 
-	InitFunc     func(instance redis.UniversalClient)
+type RedisConfig struct {
+	redis.UniversalOptions
+	InitFunc func(instance redis.UniversalClient)
+}
+
+type RedisStarter struct {
+	Config       RedisConfig
+	LazyConfig   func() RedisConfig
+	config       *RedisConfig
 	RedisSetting *parent.Setting
 }
 
+func (r *RedisStarter) getConfig() *RedisConfig {
+	if r.config == nil {
+		var config RedisConfig
+		if r.LazyConfig != nil {
+			config = r.LazyConfig()
+		} else {
+			config = r.Config
+		}
+		r.config = &config
+	}
+	return r.config
+}
 func (r *RedisStarter) Setting() *parent.Setting {
 	if r.RedisSetting != nil {
 		return r.RedisSetting
 	}
+	config := r.getConfig()
 	return parent.NewSetting("Redis-Starter", 19, true, time.Second*10, func(instance interface{}) {
-		if r.InitFunc != nil {
-			r.InitFunc(instance.(redis.UniversalClient))
+		if config.InitFunc != nil {
+			config.InitFunc(instance.(redis.UniversalClient))
 		}
 	})
 }
@@ -68,10 +94,8 @@ func (r *RedisStarter) closedAllConn() bool {
 }
 
 func (r *RedisStarter) Start() (interface{}, error) {
-	if r.LazyRedisConfig != nil {
-		r.RedisConfig = r.LazyRedisConfig()
-	}
-	redisClient = redis.NewUniversalClient(&r.RedisConfig)
+	config := r.getConfig()
+	redisClient = redis.NewUniversalClient(&config.UniversalOptions)
 	if err := r.ping(); err != nil {
 		return nil, err
 	}
@@ -80,6 +104,13 @@ func (r *RedisStarter) Start() (interface{}, error) {
 }
 
 func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
+	subs := topicCmd.pubSubs
+	if len(subs) > 0 {
+		for k, v := range subs {
+			_ = v.Unsubscribe(context.Background(), k)
+			_ = v.Close()
+		}
+	}
 	err = redisClient.Close()
 	if err != nil {
 		if pingErr := r.ping(); pingErr != nil {

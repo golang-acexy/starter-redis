@@ -29,12 +29,12 @@ type BloomInfo struct {
 
 // Reserve 创建布隆过滤器
 func (*cmdBloom) Reserve(key RedisKey, errorRate float64, capacity int64, keyAppend ...interface{}) error {
-	return redisClient.Do(context.Background(), "BF.RESERVE", OriginKeyString(key.KeyFormat, keyAppend...), errorRate, capacity).Err()
+	return redisClient.Do(context.Background(), "BF.RESERVE", key.RawKeyString(keyAppend...), errorRate, capacity).Err()
 }
 
 // Info 布隆过滤器信息
 func (*cmdBloom) Info(key RedisKey, keyAppend ...interface{}) (*BloomInfo, error) {
-	result, err := redisClient.Do(context.Background(), "BF.INFO", OriginKeyString(key.KeyFormat, keyAppend...)).Result()
+	result, err := redisClient.Do(context.Background(), "BF.INFO", key.RawKeyString(keyAppend...)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +53,14 @@ func (*cmdBloom) Info(key RedisKey, keyAppend ...interface{}) (*BloomInfo, error
 
 // Add 向布隆过滤器中添加元素
 func (*cmdBloom) Add(key RedisKey, value string, keyAppend ...interface{}) error {
-	return redisClient.Do(context.Background(), "BF.ADD", OriginKeyString(key.KeyFormat, keyAppend...), value).Err()
+	return redisClient.Do(context.Background(), "BF.ADD", key.RawKeyString(keyAppend...), value).Err()
 }
 
 // MAdd 向布隆过滤器中批量添加元素
 func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...interface{}) error {
 	args := make([]interface{}, 0)
 	args = append(args, "BF.MADD")
-	args = append(args, OriginKeyString(key.KeyFormat, keyAppend...))
+	args = append(args, key.RawKeyString(keyAppend...))
 	for _, v := range values {
 		args = append(args, v)
 	}
@@ -69,14 +69,14 @@ func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...interface{}) e
 
 // Exists 检查元素是否存在
 func (*cmdBloom) Exists(key RedisKey, value string, keyAppend ...interface{}) (bool, error) {
-	return redisClient.Do(context.Background(), "BF.EXISTS", OriginKeyString(key.KeyFormat, keyAppend...), value).Bool()
+	return redisClient.Do(context.Background(), "BF.EXISTS", key.RawKeyString(keyAppend...), value).Bool()
 }
 
 // MExists 检查多个元素是否存在
 func (*cmdBloom) MExists(key RedisKey, values []string, keyAppend ...interface{}) ([]bool, error) {
 	args := make([]interface{}, 0)
 	args = append(args, "BF.MEXISTS")
-	args = append(args, OriginKeyString(key.KeyFormat, keyAppend...))
+	args = append(args, key.RawKeyString(keyAppend...))
 	for _, v := range values {
 		args = append(args, v)
 	}

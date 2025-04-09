@@ -16,20 +16,23 @@ const isCluster = true
 var loader *parent.StarterLoader
 
 var standalone = &redisstarter.RedisStarter{
-	RedisConfig: redis.UniversalOptions{
-		Addrs:    []string{":6379"},
-		Password: "tech-acexy",
-		DB:       0,
+	Config: redisstarter.RedisConfig{
+		UniversalOptions: redis.UniversalOptions{
+			Addrs:    []string{":6379"},
+			Password: "tech-acexy",
+			DB:       0,
+		},
 	},
 }
 
 var cluster = &redisstarter.RedisStarter{
-	RedisConfig: redis.UniversalOptions{
-		Addrs:    []string{":6379", ":6381", ":6380"},
-		Password: "tech-acexy",
-	},
-	InitFunc: func(instance redis.UniversalClient) {
-		fmt.Println(instance.PoolStats())
+	Config: redisstarter.RedisConfig{
+		UniversalOptions: redis.UniversalOptions{Addrs: []string{":6379", ":6381", ":6380"},
+			Password: "tech-acexy",
+		},
+		InitFunc: func(instance redis.UniversalClient) {
+			fmt.Println(instance.PoolStats())
+		},
 	},
 }
 

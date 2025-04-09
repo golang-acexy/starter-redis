@@ -12,7 +12,7 @@ func TestDel(t *testing.T) {
 	key := redisstarter.RedisKey{
 		KeyFormat: "key-hash",
 	}
-	fmt.Println(redisstarter.OriginKeyString(key.KeyFormat))
+	fmt.Println(key.RawKeyString())
 	fmt.Println(keyType.Del(key))
 }
 
