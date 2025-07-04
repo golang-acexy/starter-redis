@@ -5,7 +5,7 @@ go 1.23.5
 require (
 	github.com/acexy/golang-toolkit v0.0.49
 	github.com/bsm/redislock v0.9.4
-	github.com/golang-acexy/starter-parent v0.1.15
+	github.com/golang-acexy/starter-parent v0.1.16
 	github.com/redis/go-redis/v9 v9.11.0
 )
 
