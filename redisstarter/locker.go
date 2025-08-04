@@ -23,6 +23,10 @@ func (l *Locker) ReleaseWithCtx(ctx context.Context) error {
 	return l.lock.Release(ctx)
 }
 
+func (l *Locker) Refresh(ttl time.Duration, opt *redislock.Options) error {
+	return l.lock.Refresh(context.Background(), ttl, opt)
+}
+
 // 分布式锁
 
 func distributedLocker() *redislock.Client {
