@@ -25,7 +25,7 @@ func tryLock(k string, i *int) {
 	err, done := redisstarter.TryLock(redisstarter.NewRedisKey("tryLock", time.Second), func() {
 		*i = *i + 1
 		fmt.Println(*i)
-	})
+	}, nil)
 	if err != nil {
 		fmt.Printf("%+v %s \n", err, k)
 		return
@@ -34,11 +34,11 @@ func tryLock(k string, i *int) {
 }
 
 func lock(ctx context.Context, key string, i *int) {
-	err, done := redisstarter.LockWithDeadline(ctx, redisstarter.NewRedisKey("key", time.Minute), time.Now().Add(time.Minute), 200, func() {
+	err, done := redisstarter.LockWithDeadline(ctx, redisstarter.NewRedisKey("key", time.Minute), "", time.Now().Add(time.Minute), 200, func() {
 		*i = *i + 1
 		time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
 		fmt.Println(*i)
-	})
+	}, nil)
 	if err != nil {
 		fmt.Printf("%+v %s \n", err, key)
 		return
@@ -94,7 +94,7 @@ func TestDistributedLock(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
-			err, done := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), time.Now().Add(time.Minute*5), 200, executable)
+			err, done := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), "", time.Now().Add(time.Minute*5), 200, executable)
 			if err != nil {
 				fmt.Printf("%+v %s \n", err, key)
 				return
@@ -109,7 +109,7 @@ func TestDistributedLock(t *testing.T) {
 func TestTryAndGetLocker(t *testing.T) {
 	tk := "distributed-key-locker" + time.Now().String()
 	go func() {
-		l, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second*10))
+		l, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second*10), nil)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -126,7 +126,7 @@ func TestTryAndGetLocker(t *testing.T) {
 
 	go func() {
 		for {
-			_, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second))
+			_, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second), nil)
 			if err != nil {
 				fmt.Println(err)
 				time.Sleep(time.Millisecond * 200)
