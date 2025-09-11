@@ -3,12 +3,13 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/acexy/golang-toolkit/math/random"
-	"github.com/acexy/golang-toolkit/sys"
-	"github.com/golang-acexy/starter-redis/redisstarter"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/acexy/golang-toolkit/math/random"
+	"github.com/acexy/golang-toolkit/sys"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 )
 
 func TestTryLock(t *testing.T) {

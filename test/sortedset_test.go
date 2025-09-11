@@ -2,9 +2,10 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/golang-acexy/starter-redis/redisstarter"
 	"github.com/redis/go-redis/v9"
-	"testing"
 )
 
 func TestSortedSet(t *testing.T) {

@@ -3,10 +3,11 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redisstarter"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/golang-acexy/starter-redis/redisstarter"
 )
 
 func TestList(t *testing.T) {

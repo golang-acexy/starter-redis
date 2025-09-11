@@ -3,12 +3,13 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/acexy/golang-toolkit/sys"
-	"github.com/golang-acexy/starter-redis/redisstarter"
-	"github.com/redis/go-redis/v9"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/acexy/golang-toolkit/sys"
+	"github.com/golang-acexy/starter-redis/redisstarter"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestSubscribeTopicStopWithContext(t *testing.T) {

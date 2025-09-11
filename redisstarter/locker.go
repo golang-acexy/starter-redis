@@ -2,9 +2,10 @@ package redisstarter
 
 import (
 	"context"
+	"time"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/bsm/redislock"
-	"time"
 )
 
 type Locker struct {

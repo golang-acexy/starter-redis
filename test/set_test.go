@@ -2,9 +2,10 @@ package test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/acexy/golang-toolkit/util/json"
 	"github.com/golang-acexy/starter-redis/redisstarter"
-	"testing"
 )
 
 var setCmd = redisstarter.SetCmd()

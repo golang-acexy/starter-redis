@@ -2,10 +2,11 @@ package test
 
 import (
 	"fmt"
-	"github.com/acexy/golang-toolkit/util/json"
-	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
+
+	"github.com/acexy/golang-toolkit/util/json"
+	"github.com/golang-acexy/starter-redis/redisstarter"
 )
 
 func TestHSet(t *testing.T) {

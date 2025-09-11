@@ -3,10 +3,11 @@ package redisstarter
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/bsm/redislock"
 	"github.com/golang-acexy/starter-parent/parent"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 var redisClient redis.UniversalClient

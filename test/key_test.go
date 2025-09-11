@@ -2,9 +2,10 @@ package test
 
 import (
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
 	"time"
+
+	"github.com/golang-acexy/starter-redis/redisstarter"
 )
 
 func TestDel(t *testing.T) {

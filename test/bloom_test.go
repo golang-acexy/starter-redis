@@ -2,8 +2,9 @@ package test
 
 import (
 	"fmt"
-	"github.com/golang-acexy/starter-redis/redisstarter"
 	"testing"
+
+	"github.com/golang-acexy/starter-redis/redisstarter"
 )
 
 var key = redisstarter.RedisKey{
