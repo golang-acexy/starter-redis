@@ -3,9 +3,10 @@ package redisstarter
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/redis/go-redis/v9"
-	"time"
 )
 
 type cmdList struct {
