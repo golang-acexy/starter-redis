@@ -115,10 +115,8 @@ func TestTryAndGetLocker(t *testing.T) {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(sys.GetGoroutineId(), "获取到锁")
 		time.Sleep(time.Second * 5)
 		err = l.Release()
-		fmt.Println(sys.GetGoroutineId(), "已释放锁")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -133,7 +131,6 @@ func TestTryAndGetLocker(t *testing.T) {
 				time.Sleep(time.Millisecond * 200)
 				continue
 			}
-			fmt.Println(sys.GetGoroutineId(), "获取到锁")
 			break
 		}
 	}()
