@@ -1,5 +1,5 @@
-github.com/acexy/golang-toolkit v0.0.55 h1:CZKhaBh1fqoqMKJjYqac+zv714tTmpyyiexaZTr0zKY=
-github.com/acexy/golang-toolkit v0.0.55/go.mod h1:RhxILrytx3SUwgzzcnahBInn9YY8TmW9kfGb0o7bh7c=
+github.com/acexy/golang-toolkit v0.0.57 h1:j/shLL6LO1EF2AlJycqombCOFSyiGXOl9tEKRP6myTk=
+github.com/acexy/golang-toolkit v0.0.57/go.mod h1:l0Gm1q9jM1B4isoYffUsHez4MiG9FJyyM4anTj0mCnQ=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=
@@ -13,8 +13,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/golang-acexy/starter-parent v0.1.19 h1:wlKmjX1X00/M5zEIe7gs2ktDWQN+eacE61aEFfi4jRw=
-github.com/golang-acexy/starter-parent v0.1.19/go.mod h1:m+TMFnOBk4xijEKmzlKZBx1O0715uclDlwIOleSl28I=
+github.com/golang-acexy/starter-parent v0.1.20 h1:ldrICW/QmDaA3yuwMdD6GuKx9aLgSaBgkiG13Y4kojY=
+github.com/golang-acexy/starter-parent v0.1.20/go.mod h1:DCGDH3ekHzQXKvfGgk6ipJeZJjmzjfrewBHFcW1HUK4=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/iancoleman/strcase v0.3.0 h1:nTXanmYxhfFAMjZL34Ov6gkzEsSJZ5DbhxWjvSASxEI=
