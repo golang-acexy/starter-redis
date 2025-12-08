@@ -34,7 +34,7 @@ func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
 }
 
 // RawKeyString 获取原始key字符串
-func (r RedisKey) RawKeyString(keyAppend ...interface{}) string {
+func (r RedisKey) RawKeyString(keyAppend ...any) string {
 	if len(keyAppend) > 0 {
 		return fmt.Sprintf(r.KeyFormat, keyAppend...)
 	}
@@ -70,7 +70,7 @@ func (r *RedisStarter) Setting() *parent.Setting {
 		return r.RedisSetting
 	}
 	config := r.getConfig()
-	return parent.NewSetting("Redis-Starter", 19, true, time.Second*10, func(instance interface{}) {
+	return parent.NewSetting("Redis-Starter", 19, true, time.Second*10, func(instance any) {
 		if config.InitFunc != nil {
 			config.InitFunc(instance.(redis.UniversalClient))
 		}
@@ -94,7 +94,7 @@ func (r *RedisStarter) closedAllConn() bool {
 	return false
 }
 
-func (r *RedisStarter) Start() (interface{}, error) {
+func (r *RedisStarter) Start() (any, error) {
 	config := r.getConfig()
 	redisClient = redis.NewUniversalClient(&config.UniversalOptions)
 	if err := r.ping(); err != nil {
