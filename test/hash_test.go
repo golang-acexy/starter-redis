@@ -58,5 +58,5 @@ func TestHSetAny(t *testing.T) {
 	fmt.Println(hashType.HSetAny(key, "1", u1))
 	var u User
 	fmt.Println(hashType.HGetAny(key, "1", &u))
-	fmt.Println(json.ToJson(u))
+	fmt.Println(json.ToString(u))
 }
