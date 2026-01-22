@@ -77,7 +77,7 @@ func TestStandalone(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(json.ToJsonFormat(stopResult))
+	fmt.Println(json.ToStringFormat(stopResult))
 }
 
 // 集群Redis
@@ -107,5 +107,5 @@ func TestCluster(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(json.ToJsonFormat(stopResult))
+	fmt.Println(json.ToStringFormat(stopResult))
 }

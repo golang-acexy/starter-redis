@@ -20,7 +20,7 @@ func (s *ObjectStruct) UnmarshalBinary(data []byte) error {
 }
 
 func (s *ObjectStruct) MarshalBinary() (data []byte, err error) {
-	return json.ToJsonBytesError(s)
+	return json.ToBytesError(s)
 }
 
 func TestSet(t *testing.T) {
@@ -57,7 +57,7 @@ func TestSetStruct(t *testing.T) {
 	}
 	var structs []*ObjectStruct
 	fmt.Println(setCmd.SMembersScan(key, &structs))
-	fmt.Println(json.ToJson(structs))
+	fmt.Println(json.ToString(structs))
 
 	fmt.Println(setCmd.SRem(key, &ObjectStruct{Name: "name", Age: 89}))
 	fmt.Println(setCmd.SMembersScan(key, &structs))
