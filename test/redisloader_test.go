@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 	} else {
 		loadType = standalone
 	}
-	loader = parent.NewStarterLoader([]parent.Starter{loadType})
+	loader = parent.InitStarterLoader([]parent.Starter{loadType})
 
 	err := loader.Start()
 	if err != nil {
@@ -73,7 +73,7 @@ func TestStandalone(t *testing.T) {
 		}
 	}()
 	time.Sleep(time.Second * 10)
-	stopResult, err := loader.StopBySetting()
+	stopResult, err := loader.StopAllBySetting()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -82,7 +82,7 @@ func TestStandalone(t *testing.T) {
 
 // 集群Redis
 func TestCluster(t *testing.T) {
-	clusterLoader := parent.NewStarterLoader([]parent.Starter{cluster})
+	clusterLoader := parent.InitStarterLoader([]parent.Starter{cluster})
 	err := clusterLoader.Start()
 	if err != nil {
 		fmt.Printf("%+v\n", err)
@@ -103,7 +103,7 @@ func TestCluster(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second * 10)
-	stopResult, err := loader.StopBySetting()
+	stopResult, err := loader.StopAllBySetting()
 	if err != nil {
 		fmt.Println(err)
 	}

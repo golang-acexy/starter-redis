@@ -79,15 +79,16 @@ func (r *RedisStarter) Setting() *parent.Setting {
 
 func (r *RedisStarter) ping() error {
 	if redisClient == nil {
-		return nil
+		return ErrRedisClientNotStarted
 	}
 	return redisClient.Ping(context.Background()).Err()
 }
-func (r *RedisStarter) closedAllConn() bool {
-	if redisClient == nil {
+
+func (r *RedisStarter) closedAllConn(client redis.UniversalClient) bool {
+	if client == nil {
 		return true
 	}
-	stats := redisClient.PoolStats()
+	stats := client.PoolStats()
 	if stats.IdleConns == 0 && stats.TotalConns == 0 {
 		return true
 	}
@@ -95,9 +96,13 @@ func (r *RedisStarter) closedAllConn() bool {
 }
 
 func (r *RedisStarter) Start() (any, error) {
+	if redisClient != nil {
+		return redisClient, ErrRedisStarterAlreadyStarted
+	}
 	config := r.getConfig()
 	redisClient = redis.NewUniversalClient(&config.UniversalOptions)
 	if err := r.ping(); err != nil {
+		closeAndClearRedisState()
 		return nil, err
 	}
 	redisLockerClient = redislock.New(redisClient)
@@ -105,24 +110,29 @@ func (r *RedisStarter) Start() (any, error) {
 }
 
 func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	subs := topicCmd.pubSubs
-	if len(subs) > 0 {
-		for k, v := range subs {
-			_ = v.Unsubscribe(context.Background(), k)
-			_ = v.Close()
-		}
+	client := redisClient
+	if client == nil {
+		return false, true, ErrRedisClientNotStarted
 	}
-	err = redisClient.Close()
+	topicCmd.closeAll(context.Background())
+	err = client.Close()
 	if err != nil {
-		if pingErr := r.ping(); pingErr != nil {
+		if pingErr := client.Ping(context.Background()).Err(); pingErr != nil {
 			stopped = true
+			clearRedisState()
 		}
 		return
 	}
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 	go func() {
 		for {
-			if r.closedAllConn() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			if r.closedAllConn(client) {
 				cancelFunc()
 				return
 			}
@@ -132,10 +142,16 @@ func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool
 	select {
 	case <-ctx.Done():
 		gracefully = true
-		stopped = r.ping() != nil
+		stopped = client.Ping(context.Background()).Err() != nil
+		if stopped {
+			clearRedisState()
+		}
 	case <-time.After(maxWaitTime):
 		gracefully = false
-		stopped = r.ping() != nil
+		stopped = client.Ping(context.Background()).Err() != nil
+		if stopped {
+			clearRedisState()
+		}
 	}
 	return
 }
@@ -148,4 +164,16 @@ func RawRedisClient() redis.UniversalClient {
 // RawLockerClient 获取原始RedisLockerClient进行操作
 func RawLockerClient() *redislock.Client {
 	return redisLockerClient
+}
+
+func clearRedisState() {
+	redisClient = nil
+	redisLockerClient = nil
+}
+
+func closeAndClearRedisState() {
+	if redisClient != nil {
+		_ = redisClient.Close()
+	}
+	clearRedisState()
 }

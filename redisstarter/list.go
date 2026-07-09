@@ -72,15 +72,5 @@ func (*cmdList) BPop(ctx context.Context, directionRight bool, timeout time.Dura
 			}
 		}
 	}()
-	if timeout == time.Duration(0) {
-		// 该逻辑是为了防止使用永久阻塞式弹出数据的方式将导致上面的select无法感知上下文取消
-		// 通过补偿来关闭业务数据管道
-		go func() {
-			select {
-			case <-ctx.Done():
-				close(c)
-			}
-		}()
-	}
 	return c
 }

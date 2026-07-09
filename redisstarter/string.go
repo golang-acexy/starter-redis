@@ -2,7 +2,6 @@ package redisstarter
 
 import (
 	"context"
-	"errors"
 
 	"github.com/acexy/golang-toolkit/logger"
 	"github.com/acexy/golang-toolkit/util/gob"
@@ -20,7 +19,7 @@ func StringCmd() *cmdString {
 
 func set(key RedisKey, value interface{}, keyAppend ...interface{}) error {
 	if value == nil {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	status := redisClient.Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
 	err := status.Err()
@@ -85,7 +84,7 @@ func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...interface{
 // MSet 批量设置字符串
 func (*cmdString) MSet(data map[string]string) error {
 	if data == nil || len(data) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	array := make([]interface{}, len(data)*2)
 	index := 0
@@ -101,7 +100,7 @@ func (*cmdString) MSet(data map[string]string) error {
 // MSetWithHashTag 批量设置字符串 用于在集群模式指定hashTag将key分配在同一个hash槽中
 func (*cmdString) MSetWithHashTag(hashTag string, data map[string]string) error {
 	if data == nil || len(data) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	array := make([]interface{}, len(data)*2)
 	index := 0
@@ -117,7 +116,7 @@ func (*cmdString) MSetWithHashTag(hashTag string, data map[string]string) error 
 // MSetBytes 批量设置字节数据
 func (*cmdString) MSetBytes(data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	array := make([]interface{}, len(data)*2)
 	index := 0
@@ -133,7 +132,7 @@ func (*cmdString) MSetBytes(data map[string][]byte) error {
 // MSetBytesWithHashTag 批量设置字节数据
 func (*cmdString) MSetBytesWithHashTag(hashTag string, data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	array := make([]interface{}, len(data)*2)
 	index := 0
@@ -169,7 +168,7 @@ func parseMGetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
 			if str, ok := d.(string); ok {
 				k[i] = str
 			} else {
-				return nil, errors.New("not a string value")
+				return nil, ErrNotStringValue
 			}
 		}
 	}
@@ -196,7 +195,7 @@ func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
 // MGet 一次性获取多个String类型的值
 func (*cmdString) MGet(keys ...string) ([]string, error) {
 	if len(keys) == 0 {
-		return nil, errors.New("nil keys")
+		return nil, ErrNilKeys
 	}
 	return parseMGetStringValue(mget(keys...))
 }
@@ -204,7 +203,7 @@ func (*cmdString) MGet(keys ...string) ([]string, error) {
 // MGetWithHashTag 一次性获取多个String类型的值
 func (*cmdString) MGetWithHashTag(hashTag string, keys ...string) ([]string, error) {
 	if len(keys) == 0 {
-		return nil, errors.New("nil keys")
+		return nil, ErrNilKeys
 	}
 	for index, key := range keys {
 		keys[index] = "{" + hashTag + "}" + key
@@ -220,7 +219,7 @@ func (*cmdString) MGetBytes(keys ...string) ([][]byte, error) {
 		}
 	}()
 	if len(keys) == 0 {
-		return nil, errors.New("nil keys")
+		return nil, ErrNilKeys
 	}
 	return parseMGetBytesValue(mget(keys...))
 }
@@ -233,7 +232,7 @@ func (*cmdString) MGetBytesWithHashTag(hashTag string, keys ...string) ([][]byte
 		}
 	}()
 	if len(keys) == 0 {
-		return nil, errors.New("nil keys")
+		return nil, ErrNilKeys
 	}
 	for index, key := range keys {
 		keys[index] = "{" + hashTag + "}" + key
