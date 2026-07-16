@@ -91,8 +91,8 @@ func TestExecutable(t *testing.T) {
 func TestDistributedLock(t *testing.T) {
 	key := "distributed-key"
 	var wg sync.WaitGroup
-	wg.Add(2)
-	for i := 0; i < 2; i++ {
+	wg.Add(20)
+	for i := 0; i < 20; i++ {
 		go func() {
 			defer wg.Done()
 			err, done := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), "", time.Now().Add(time.Minute*5), 200, executable)

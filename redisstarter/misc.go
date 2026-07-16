@@ -2,7 +2,7 @@ package redisstarter
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,7 +36,7 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...int
 	defer c.pubSubsMutex.Unlock()
 
 	if _, ok := c.pubSubs[keyString]; ok {
-		return nil, errors.New("already subscribed to topic: " + keyString)
+		return nil, fmt.Errorf("%w: %s", ErrAlreadySubscribedToTopic, keyString)
 	}
 
 	pubSub := redisClient.Subscribe(ctx, keyString)
@@ -53,10 +53,19 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...int
 func (c *cmdTopic) SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.Message)) {
 	go func() {
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			ch, err := c.Subscribe(ctx, topicKey)
 			if err != nil {
 				// 订阅失败，等待重试
-				time.Sleep(5 * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
 				continue
 			}
 			for msg := range ch {
@@ -78,10 +87,22 @@ func (c *cmdTopic) Unsubscribe(key RedisKey, keyAppend ...interface{}) error {
 	defer c.pubSubsMutex.Unlock()
 	pubSub, ok := c.pubSubs[keyString]
 	if !ok {
-		return errors.New("not subscribed to topic: " + keyString)
+		return fmt.Errorf("%w: %s", ErrNotSubscribedToTopic, keyString)
 	}
 	err := pubSub.Unsubscribe(context.Background(), keyString)
 	_ = pubSub.Close()
 	delete(c.pubSubs, keyString)
 	return err
+}
+
+func (c *cmdTopic) closeAll(ctx context.Context) {
+	c.pubSubsMutex.Lock()
+	subs := c.pubSubs
+	c.pubSubs = make(map[string]*redis.PubSub)
+	c.pubSubsMutex.Unlock()
+
+	for key, pubSub := range subs {
+		_ = pubSub.Unsubscribe(ctx, key)
+		_ = pubSub.Close()
+	}
 }

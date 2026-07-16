@@ -2,7 +2,8 @@ package redisstarter
 
 import (
 	"context"
-	"errors"
+	"math"
+	"strconv"
 )
 
 type cmdBloom struct {
@@ -40,14 +41,34 @@ func (*cmdBloom) Info(key RedisKey, keyAppend ...interface{}) (*BloomInfo, error
 	}
 	mapResult, ok := result.(map[interface{}]interface{})
 	if !ok {
-		return nil, errors.New("unknown redis response")
+		return nil, ErrUnknownRedisResponse
+	}
+	capacity, ok := parseRedisInt64(mapResult["Capacity"])
+	if !ok {
+		return nil, ErrUnknownRedisResponse
+	}
+	size, ok := parseRedisInt64(mapResult["Size"])
+	if !ok {
+		return nil, ErrUnknownRedisResponse
+	}
+	numberOfFilters, ok := parseRedisInt64(mapResult["Number of filters"])
+	if !ok {
+		return nil, ErrUnknownRedisResponse
+	}
+	numberOfItemsInserted, ok := parseRedisInt64(mapResult["Number of items inserted"])
+	if !ok {
+		return nil, ErrUnknownRedisResponse
+	}
+	expansionRate, ok := parseRedisInt64(mapResult["Expansion rate"])
+	if !ok {
+		return nil, ErrUnknownRedisResponse
 	}
 	return &BloomInfo{
-		Capacity:              mapResult["Capacity"].(int64),
-		Size:                  mapResult["Size"].(int64),
-		NumberOfFilters:       mapResult["Number of filters"].(int64),
-		NumberOfItemsInserted: mapResult["Number of items inserted"].(int64),
-		ExpansionRate:         mapResult["Expansion rate"].(int64),
+		Capacity:              capacity,
+		Size:                  size,
+		NumberOfFilters:       numberOfFilters,
+		NumberOfItemsInserted: numberOfItemsInserted,
+		ExpansionRate:         expansionRate,
 	}, nil
 }
 
@@ -81,4 +102,28 @@ func (*cmdBloom) MExists(key RedisKey, values []string, keyAppend ...interface{}
 		args = append(args, v)
 	}
 	return redisClient.Do(context.Background(), args...).BoolSlice()
+}
+
+func parseRedisInt64(value any) (int64, bool) {
+	switch v := value.(type) {
+	case int64:
+		return v, true
+	case int:
+		return int64(v), true
+	case int32:
+		return int64(v), true
+	case uint64:
+		if v > math.MaxInt64 {
+			return 0, false
+		}
+		return int64(v), true
+	case string:
+		i, err := strconv.ParseInt(v, 10, 64)
+		return i, err == nil
+	case []byte:
+		i, err := strconv.ParseInt(string(v), 10, 64)
+		return i, err == nil
+	default:
+		return 0, false
+	}
 }

@@ -93,7 +93,7 @@ func TestSubscribeClose(t *testing.T) {
 		return
 	}
 	time.Sleep(time.Second)
-	loader.StopBySetting()
+	loader.StopAllBySetting()
 	sys.ShutdownHolding()
 }
 
@@ -106,7 +106,7 @@ func TestSubscribeRetry(t *testing.T) {
 		fmt.Println(message)
 	})
 	//time.Sleep(time.Second)
-	//loader.StopBySetting()
+	//loader.StopAllBySetting()
 	//cmd.Unsubscribe(key1)
 }
 

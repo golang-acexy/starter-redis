@@ -2,7 +2,6 @@ package redisstarter
 
 import (
 	"context"
-	"errors"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,7 +17,7 @@ func SetCmd() *cmdSet {
 
 func sAdd(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if value == nil {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
 	cmd := redisClient.SAdd(context.Background(), originKey, value...)
@@ -46,7 +45,7 @@ func (*cmdSet) SAdd(key RedisKey, value interface{}, keyAppend ...interface{}) e
 // SAdds 增加多个元素
 func (*cmdSet) SAdds(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if len(value) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	slice := make([]interface{}, len(value))
 	for i, v := range value {

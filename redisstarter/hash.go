@@ -2,7 +2,6 @@ package redisstarter
 
 import (
 	"context"
-	"errors"
 
 	"github.com/acexy/golang-toolkit/util/gob"
 	"github.com/redis/go-redis/v9"
@@ -19,7 +18,7 @@ func HashCmd() *cmdHash {
 
 func hSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if value == nil {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
 	cmd := redisClient.HSet(context.Background(), originKey, value)
@@ -36,7 +35,7 @@ func hSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 
 func hMSet(key RedisKey, value []interface{}, keyAppend ...interface{}) error {
 	if len(value) == 0 {
-		return errors.New("nil value")
+		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
 	cmd := redisClient.HMSet(context.Background(), originKey, value)

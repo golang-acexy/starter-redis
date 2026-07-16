@@ -28,14 +28,19 @@ func (l *Locker) Refresh(ttl time.Duration, opt *redislock.Options) error {
 	return l.lock.Refresh(context.Background(), ttl, opt)
 }
 
-// 分布式锁
-
-func distributedLocker() *redislock.Client {
-	return redisLockerClient
+func currentLockerClient() (*redislock.Client, error) {
+	if redisLockerClient == nil {
+		return nil, ErrRedisLockerNotStarted
+	}
+	return redisLockerClient, nil
 }
 
 func lock(ctx context.Context, key string, ttl time.Duration, executable func(), token string, retry redislock.RetryStrategy) (error, <-chan struct{}) {
-	redisLock, err := distributedLocker().Obtain(ctx, key, ttl, &redislock.Options{
+	lockerClient, err := currentLockerClient()
+	if err != nil {
+		return err, nil
+	}
+	redisLock, err := lockerClient.Obtain(ctx, key, ttl, &redislock.Options{
 		RetryStrategy: retry,
 		Token:         token,
 	})
@@ -44,11 +49,10 @@ func lock(ctx context.Context, key string, ttl time.Duration, executable func(),
 	}
 	chn := make(chan struct{})
 	defer func() {
+		defer close(chn)
 		err = redisLock.Release(context.Background())
 		if err != nil {
 			logger.Logrus().WithError(err).Errorln("release redisLock error key =", key)
-		} else {
-			close(chn)
 		}
 	}()
 	executable()
@@ -68,7 +72,11 @@ func TryAndGetLocker(key RedisKey, opt *redislock.Options, keyAppend ...interfac
 
 // TryLockWithContext 尝试获取锁并执行executable函数
 func TryLockWithContext(ctx context.Context, key RedisKey, executable func(), opt *redislock.Options, keyAppend ...interface{}) (error, <-chan struct{}) {
-	redisLock, err := distributedLocker().Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, opt)
+	lockerClient, err := currentLockerClient()
+	if err != nil {
+		return err, nil
+	}
+	redisLock, err := lockerClient.Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, opt)
 	if err != nil {
 		return err, nil
 	}
@@ -86,7 +94,11 @@ func TryLockWithContext(ctx context.Context, key RedisKey, executable func(), op
 
 // TryAndGetLockerWithContext 尝试获取锁并返回Locker
 func TryAndGetLockerWithContext(ctx context.Context, key RedisKey, opt *redislock.Options, keyAppend ...interface{}) (*Locker, error) {
-	redisLock, err := distributedLocker().Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, opt)
+	lockerClient, err := currentLockerClient()
+	if err != nil {
+		return nil, err
+	}
+	redisLock, err := lockerClient.Obtain(ctx, key.RawKeyString(keyAppend...), key.Expire, opt)
 	if err != nil {
 		return nil, err
 	}
