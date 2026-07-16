@@ -70,7 +70,7 @@ func (r *RedisStarter) Setting() *parent.Setting {
 		return r.RedisSetting
 	}
 	config := r.getConfig()
-	return parent.NewSetting("Redis-Starter", 19, true, time.Second*10, func(instance any) {
+	return parent.NewSetting("Redis-Starter", false, 19, true, time.Second*10, func(instance any) {
 		if config.InitFunc != nil {
 			config.InitFunc(instance.(redis.UniversalClient))
 		}
