@@ -105,7 +105,7 @@ func (r *RedisStarter) Start() (any, error) {
 		closeAndClearRedisState()
 		return nil, err
 	}
-	redisLockerClient = redislock.New(redisClient)
+	setLockerClient(redislock.New(redisClient))
 	return redisClient, nil
 }
 
@@ -163,12 +163,12 @@ func RawRedisClient() redis.UniversalClient {
 
 // RawLockerClient 获取原始RedisLockerClient进行操作
 func RawLockerClient() *redislock.Client {
-	return redisLockerClient
+	return rawLockerClient()
 }
 
 func clearRedisState() {
 	redisClient = nil
-	redisLockerClient = nil
+	setLockerClient(nil)
 }
 
 func closeAndClearRedisState() {

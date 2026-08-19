@@ -93,16 +93,16 @@ The starter wraps `bsm/redislock` and provides callback and explicit-lock styles
 ```go
 lockKey := redisstarter.NewRedisKey("lock:order:%d", 10*time.Second)
 
-err, done := redisstarter.TryLockWithContext(ctx, lockKey, func() {
-    // Execute the protected operation.
-}, nil, orderID)
+err := redisstarter.TryLockWithContext(ctx, lockKey, func() error {
+    // Execute the protected operation and return its error.
+    return nil
+}, orderID)
 if err != nil {
     return err
 }
-<-done
 ```
 
-Use `TryAndGetLockerWithContext` when the caller must control unlock timing. `LockWithMaxRetry` and `LockWithDeadline` support bounded retry policies. Always choose an expiration longer than the expected protected operation and propagate cancellation through context-aware APIs.
+The callback executes synchronously. The returned error includes callback and unlock failures. Use `ObtainLockerWithContext` when the caller must control unlock timing or refresh a long-running lock. Advanced lock token and metadata settings are available through the corresponding `WithOptions` APIs. `LockWithMaxRetry` and `LockWithDeadline` support bounded retry policies. Always choose an expiration longer than the expected protected operation and propagate cancellation through context-aware APIs.
 
 ## Raw Access
 
