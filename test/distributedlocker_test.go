@@ -23,28 +23,28 @@ func TestTryLock(t *testing.T) {
 }
 
 func tryLock(k string, i *int) {
-	err, done := redisstarter.TryLock(redisstarter.NewRedisKey("tryLock", time.Second), func() {
+	err := redisstarter.TryLock(redisstarter.NewRedisKey("tryLock", time.Second), func() error {
 		*i = *i + 1
 		fmt.Println(*i)
-	}, nil)
+		return nil
+	})
 	if err != nil {
 		fmt.Printf("%+v %s \n", err, k)
 		return
 	}
-	<-done
 }
 
 func lock(ctx context.Context, key string, i *int) {
-	err, done := redisstarter.LockWithDeadline(ctx, redisstarter.NewRedisKey("key", time.Minute), "", time.Now().Add(time.Minute), 200, func() {
+	err := redisstarter.LockWithDeadline(ctx, redisstarter.NewRedisKey("key", time.Minute), time.Now().Add(time.Minute), 200, func() error {
 		*i = *i + 1
 		time.Sleep(time.Duration(random.RandRangeInt(100, 300)) * time.Millisecond)
 		fmt.Println(*i)
-	}, nil)
+		return nil
+	})
 	if err != nil {
 		fmt.Printf("%+v %s \n", err, key)
 		return
 	}
-	<-done
 }
 
 func TestLockWithDeadline(t *testing.T) {
@@ -95,12 +95,14 @@ func TestDistributedLock(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		go func() {
 			defer wg.Done()
-			err, done := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), "", time.Now().Add(time.Minute*5), 200, executable)
+			err := redisstarter.LockWithDeadline(context.Background(), redisstarter.NewRedisKey("distributed-key", time.Minute), time.Now().Add(time.Minute*5), 200, func() error {
+				executable()
+				return nil
+			})
 			if err != nil {
 				fmt.Printf("%+v %s \n", err, key)
 				return
 			}
-			<-done
 			fmt.Println("done")
 		}()
 	}
@@ -110,7 +112,7 @@ func TestDistributedLock(t *testing.T) {
 func TestTryAndGetLocker(t *testing.T) {
 	tk := "distributed-key-locker" + time.Now().String()
 	go func() {
-		l, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second*10), nil)
+		l, err := redisstarter.ObtainLocker(redisstarter.NewRedisKey(tk, time.Second*10))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -125,7 +127,7 @@ func TestTryAndGetLocker(t *testing.T) {
 
 	go func() {
 		for {
-			_, err := redisstarter.TryAndGetLocker(redisstarter.NewRedisKey(tk, time.Second), nil)
+			_, err := redisstarter.ObtainLocker(redisstarter.NewRedisKey(tk, time.Second))
 			if err != nil {
 				fmt.Println(err)
 				time.Sleep(time.Millisecond * 200)
