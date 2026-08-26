@@ -84,17 +84,6 @@ func (r *RedisStarter) ping() error {
 	return redisClient.Ping(context.Background()).Err()
 }
 
-func (r *RedisStarter) closedAllConn(client redis.UniversalClient) bool {
-	if client == nil {
-		return true
-	}
-	stats := client.PoolStats()
-	if stats.IdleConns == 0 && stats.TotalConns == 0 {
-		return true
-	}
-	return false
-}
-
 func (r *RedisStarter) Start() (any, error) {
 	if redisClient != nil {
 		return redisClient, ErrRedisStarterAlreadyStarted
@@ -114,46 +103,16 @@ func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool
 	if client == nil {
 		return false, true, ErrRedisClientNotStarted
 	}
-	topicCmd.closeAll(context.Background())
+	ctx := context.Background()
+	if maxWaitTime > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, maxWaitTime)
+		defer cancel()
+	}
+	topicCmd.closeAll(ctx)
 	err = client.Close()
-	if err != nil {
-		if pingErr := client.Ping(context.Background()).Err(); pingErr != nil {
-			stopped = true
-			clearRedisState()
-		}
-		return
-	}
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-			if r.closedAllConn(client) {
-				cancelFunc()
-				return
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		gracefully = true
-		stopped = client.Ping(context.Background()).Err() != nil
-		if stopped {
-			clearRedisState()
-		}
-	case <-time.After(maxWaitTime):
-		gracefully = false
-		stopped = client.Ping(context.Background()).Err() != nil
-		if stopped {
-			clearRedisState()
-		}
-	}
-	return
+	clearRedisState()
+	return err == nil, true, err
 }
 
 // RawRedisClient 获取原始RedisClient进行操作

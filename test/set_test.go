@@ -1,3 +1,5 @@
+//go:build integration
+
 package test
 
 import (
@@ -28,7 +30,7 @@ func TestSet(t *testing.T) {
 		KeyFormat: "key-set",
 	}
 	redisstarter.KeyCmd().Del(key)
-	err := setCmd.SAdds(key, []interface{}{
+	err := setCmd.SAdds(key, []any{
 		"你",
 		"好",
 		&ObjectStruct{

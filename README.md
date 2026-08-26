@@ -8,7 +8,7 @@ Use this module when an application needs direct Redis capabilities. Higher-leve
 
 ## Requirements
 
-- Go `1.25.8`
+- Go `1.26.7`
 - Redis standalone, Sentinel, or Cluster endpoints supported by `redis.UniversalOptions`
 - `starter-parent` for coordinated lifecycle management
 
@@ -124,3 +124,17 @@ Reusable lifecycle and lock errors are declared in `redisstarter/error.go`. In p
 - Standard commands use explicit contexts and centralized `RedisKey` definitions.
 - The standard Redis starter does not allow parent-managed restart after successful shutdown.
 - Use `cloud-cache` instead of building application cache synchronization directly on Pub/Sub.
+
+## Testing
+
+Default tests are deterministic package-level unit tests and do not require Redis:
+
+```bash
+go test ./...
+```
+
+Tests under `test/` exercise a real standalone or cluster deployment and are guarded by the `integration` build tag. Configure their Redis endpoints for the target environment before running them explicitly:
+
+```bash
+go test -tags=integration ./test
+```

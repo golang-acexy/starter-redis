@@ -17,13 +17,13 @@ func SortedSetCmd() *cmdSortedSet {
 }
 
 // ZAdd 新增单个元素
-func (*cmdSortedSet) ZAdd(key RedisKey, member redis.Z, keyAppend ...interface{}) error {
+func (*cmdSortedSet) ZAdd(key RedisKey, member redis.Z, keyAppend ...any) error {
 	cmd := redisClient.ZAdd(context.Background(), key.RawKeyString(keyAppend...), member)
 	return cmd.Err()
 }
 
 // ZAdds 新增多个元素
-func (*cmdSortedSet) ZAdds(key RedisKey, member []redis.Z, keyAppend ...interface{}) (int64, error) {
+func (*cmdSortedSet) ZAdds(key RedisKey, member []redis.Z, keyAppend ...any) (int64, error) {
 	cmd := redisClient.ZAdd(context.Background(), key.RawKeyString(keyAppend...), member...)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -32,7 +32,7 @@ func (*cmdSortedSet) ZAdds(key RedisKey, member []redis.Z, keyAppend ...interfac
 }
 
 // ZRem 删除元素
-func (*cmdSortedSet) ZRem(key RedisKey, members interface{}, keyAppend ...interface{}) (int64, error) {
+func (*cmdSortedSet) ZRem(key RedisKey, members any, keyAppend ...any) (int64, error) {
 	cmd := redisClient.ZRem(context.Background(), key.RawKeyString(keyAppend...), members)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -41,7 +41,7 @@ func (*cmdSortedSet) ZRem(key RedisKey, members interface{}, keyAppend ...interf
 }
 
 // ZRems 删除多个元素
-func (*cmdSortedSet) ZRems(key RedisKey, members []interface{}, keyAppend ...interface{}) (int64, error) {
+func (*cmdSortedSet) ZRems(key RedisKey, members []any, keyAppend ...any) (int64, error) {
 	cmd := redisClient.ZRem(context.Background(), key.RawKeyString(keyAppend...), members...)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -50,7 +50,7 @@ func (*cmdSortedSet) ZRems(key RedisKey, members []interface{}, keyAppend ...int
 }
 
 // ZCount 统计分数在某个范围内的元素个数 含 min, max
-func (*cmdSortedSet) ZCount(key RedisKey, min, max float64, keyAppend ...interface{}) (int64, error) {
+func (*cmdSortedSet) ZCount(key RedisKey, min, max float64, keyAppend ...any) (int64, error) {
 	cmd := redisClient.ZCount(context.Background(), key.RawKeyString(keyAppend...), conversion.FromFloat64(min), conversion.FromFloat64(max))
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
@@ -59,7 +59,7 @@ func (*cmdSortedSet) ZCount(key RedisKey, min, max float64, keyAppend ...interfa
 }
 
 // ZRange 按排名范围获取元素 从低到高 排名从0开始
-func (*cmdSortedSet) ZRange(key RedisKey, start, stop int64, keyAppend ...interface{}) ([]string, error) {
+func (*cmdSortedSet) ZRange(key RedisKey, start, stop int64, keyAppend ...any) ([]string, error) {
 	cmd := redisClient.ZRange(context.Background(), key.RawKeyString(keyAppend...), start, stop)
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
@@ -68,7 +68,7 @@ func (*cmdSortedSet) ZRange(key RedisKey, start, stop int64, keyAppend ...interf
 }
 
 // ZRevRange 按排名范围获取元素 从高到低 排名从0开始
-func (*cmdSortedSet) ZRevRange(key RedisKey, start, stop int64, keyAppend ...interface{}) ([]string, error) {
+func (*cmdSortedSet) ZRevRange(key RedisKey, start, stop int64, keyAppend ...any) ([]string, error) {
 	cmd := redisClient.ZRevRange(context.Background(), key.RawKeyString(keyAppend...), start, stop)
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
