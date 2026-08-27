@@ -20,7 +20,7 @@ func sAdd(key RedisKey, value []any, keyAppend ...any) error {
 		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
-	cmd := redisClient.SAdd(context.Background(), originKey, value...)
+	cmd := rawRedisClient().SAdd(context.Background(), originKey, value...)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
@@ -34,7 +34,7 @@ func sAdd(key RedisKey, value []any, keyAppend ...any) error {
 
 func sRem(key RedisKey, value []any, keyAppend ...any) *redis.IntCmd {
 	originKey := key.RawKeyString(keyAppend...)
-	return redisClient.SRem(context.Background(), originKey, value...)
+	return rawRedisClient().SRem(context.Background(), originKey, value...)
 }
 
 // SAdd 增加单个元素
@@ -57,7 +57,7 @@ func (*cmdSet) SAdds(key RedisKey, value []any, keyAppend ...any) error {
 // SRem 删除单个元素
 func (*cmdSet) SRem(key RedisKey, value any, keyAppend ...any) (int64, error) {
 	originKey := key.RawKeyString(keyAppend...)
-	cmd := redisClient.SRem(context.Background(), originKey, value)
+	cmd := rawRedisClient().SRem(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
@@ -67,7 +67,7 @@ func (*cmdSet) SRem(key RedisKey, value any, keyAppend ...any) (int64, error) {
 // SRems 删除多个元素
 func (*cmdSet) SRems(key RedisKey, value []any, keyAppend ...any) (int64, error) {
 	originKey := key.RawKeyString(keyAppend...)
-	cmd := redisClient.SRem(context.Background(), originKey, value...)
+	cmd := rawRedisClient().SRem(context.Background(), originKey, value...)
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
@@ -76,7 +76,7 @@ func (*cmdSet) SRems(key RedisKey, value []any, keyAppend ...any) (int64, error)
 
 // SCard 获取集合元素个数
 func (*cmdSet) SCard(key RedisKey, keyAppend ...any) (int64, error) {
-	cmd := redisClient.SCard(context.Background(), key.RawKeyString(keyAppend...))
+	cmd := rawRedisClient().SCard(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return 0, cmd.Err()
 	}
@@ -85,7 +85,7 @@ func (*cmdSet) SCard(key RedisKey, keyAppend ...any) (int64, error) {
 
 // SMembers 获取集合元素
 func (*cmdSet) SMembers(key RedisKey, keyAppend ...any) ([]string, error) {
-	cmd := redisClient.SMembers(context.Background(), key.RawKeyString(keyAppend...))
+	cmd := rawRedisClient().SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}
@@ -94,7 +94,7 @@ func (*cmdSet) SMembers(key RedisKey, keyAppend ...any) ([]string, error) {
 
 // SMembersScan 获取集合元素
 func (*cmdSet) SMembersScan(key RedisKey, value any, keyAppend ...any) error {
-	cmd := redisClient.SMembers(context.Background(), key.RawKeyString(keyAppend...))
+	cmd := rawRedisClient().SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
@@ -103,7 +103,7 @@ func (*cmdSet) SMembersScan(key RedisKey, value any, keyAppend ...any) error {
 
 // SMembersMap 获取集合元素 作用是通过map key去重复
 func (*cmdSet) SMembersMap(key RedisKey, keyAppend ...any) (map[string]struct{}, error) {
-	cmd := redisClient.SMembersMap(context.Background(), key.RawKeyString(keyAppend...))
+	cmd := rawRedisClient().SMembersMap(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}

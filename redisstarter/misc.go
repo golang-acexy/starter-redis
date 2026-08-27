@@ -28,7 +28,7 @@ func TopicCmd() *cmdTopic {
 // Publish 发布消息
 func (c *cmdTopic) Publish(key RedisKey, data string, keyAppend ...any) error {
 	keyString := key.RawKeyString(keyAppend...)
-	return redisClient.Publish(context.Background(), keyString, data).Err()
+	return rawRedisClient().Publish(context.Background(), keyString, data).Err()
 }
 
 // Subscribe 订阅消息（独立连接）
@@ -48,7 +48,7 @@ func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...any
 	c.pending[keyString] = struct{}{}
 	c.pubSubsMutex.Unlock()
 
-	pubSub := redisClient.Subscribe(ctx, keyString)
+	pubSub := rawRedisClient().Subscribe(ctx, keyString)
 	_, err := pubSub.Receive(ctx)
 	if err != nil {
 		_ = pubSub.Close()

@@ -30,12 +30,12 @@ type BloomInfo struct {
 
 // Reserve 创建布隆过滤器
 func (*cmdBloom) Reserve(key RedisKey, errorRate float64, capacity int64, keyAppend ...any) error {
-	return redisClient.Do(context.Background(), "BF.RESERVE", key.RawKeyString(keyAppend...), errorRate, capacity).Err()
+	return rawRedisClient().Do(context.Background(), "BF.RESERVE", key.RawKeyString(keyAppend...), errorRate, capacity).Err()
 }
 
 // Info 布隆过滤器信息
 func (*cmdBloom) Info(key RedisKey, keyAppend ...any) (*BloomInfo, error) {
-	result, err := redisClient.Do(context.Background(), "BF.INFO", key.RawKeyString(keyAppend...)).Result()
+	result, err := rawRedisClient().Do(context.Background(), "BF.INFO", key.RawKeyString(keyAppend...)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (*cmdBloom) Info(key RedisKey, keyAppend ...any) (*BloomInfo, error) {
 
 // Add 向布隆过滤器中添加元素
 func (*cmdBloom) Add(key RedisKey, value string, keyAppend ...any) error {
-	return redisClient.Do(context.Background(), "BF.ADD", key.RawKeyString(keyAppend...), value).Err()
+	return rawRedisClient().Do(context.Background(), "BF.ADD", key.RawKeyString(keyAppend...), value).Err()
 }
 
 // MAdd 向布隆过滤器中批量添加元素
@@ -85,12 +85,12 @@ func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...any) error {
 	for _, v := range values {
 		args = append(args, v)
 	}
-	return redisClient.Do(context.Background(), args...).Err()
+	return rawRedisClient().Do(context.Background(), args...).Err()
 }
 
 // Exists 检查元素是否存在
 func (*cmdBloom) Exists(key RedisKey, value string, keyAppend ...any) (bool, error) {
-	return redisClient.Do(context.Background(), "BF.EXISTS", key.RawKeyString(keyAppend...), value).Bool()
+	return rawRedisClient().Do(context.Background(), "BF.EXISTS", key.RawKeyString(keyAppend...), value).Bool()
 }
 
 // MExists 检查多个元素是否存在
@@ -101,7 +101,7 @@ func (*cmdBloom) MExists(key RedisKey, values []string, keyAppend ...any) ([]boo
 	for _, v := range values {
 		args = append(args, v)
 	}
-	return redisClient.Do(context.Background(), args...).BoolSlice()
+	return rawRedisClient().Do(context.Background(), args...).BoolSlice()
 }
 
 func parseRedisInt64(value any) (int64, bool) {

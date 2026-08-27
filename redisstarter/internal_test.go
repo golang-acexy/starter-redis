@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bsm/redislock"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -58,5 +59,23 @@ func TestTopicCloseAllInvalidatesPendingSubscription(t *testing.T) {
 	}
 	if _, ok := cmd.pending["topic"]; !ok {
 		t.Fatal("进行中的订阅应由发起方完成清理")
+	}
+}
+
+func TestRedisRuntimeSnapshotPublication(t *testing.T) {
+	previous := redisRuntimeState.Swap(nil)
+	defer redisRuntimeState.Store(previous)
+
+	client := redis.NewUniversalClient(&redis.UniversalOptions{Addrs: []string{"127.0.0.1:6379"}})
+	defer client.Close()
+	runtime := &redisRuntime{client: client, locker: redislock.New(client)}
+	redisRuntimeState.Store(runtime)
+	if RawRedisClient() != client || RawLockerClient() != runtime.locker {
+		t.Fatal("Redis client 与 locker 未从同一运行时快照读取")
+	}
+
+	redisRuntimeState.Store(nil)
+	if RawRedisClient() != nil || RawLockerClient() != nil {
+		t.Fatal("摘除运行时快照后不应继续暴露 Redis 资源")
 	}
 }

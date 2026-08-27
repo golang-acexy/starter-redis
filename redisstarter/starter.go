@@ -3,6 +3,8 @@ package redisstarter
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bsm/redislock"
@@ -10,8 +12,23 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var redisClient redis.UniversalClient
-var redisLockerClient *redislock.Client
+var redisRuntimeState atomic.Pointer[redisRuntime]
+var redisLifecycleLock sync.Mutex
+var redisState redisLifecycleState
+
+type redisRuntime struct {
+	client redis.UniversalClient
+	locker *redislock.Client
+}
+
+type redisLifecycleState uint8
+
+const (
+	redisStopped redisLifecycleState = iota
+	redisStarting
+	redisRunning
+	redisStopping
+)
 
 type RedisKey struct {
 
@@ -77,32 +94,53 @@ func (r *RedisStarter) Setting() *parent.Setting {
 	})
 }
 
-func (r *RedisStarter) ping() error {
-	if redisClient == nil {
-		return ErrRedisClientNotStarted
-	}
-	return redisClient.Ping(context.Background()).Err()
-}
-
 func (r *RedisStarter) Start() (any, error) {
-	if redisClient != nil {
-		return redisClient, ErrRedisStarterAlreadyStarted
+	redisLifecycleLock.Lock()
+	if redisState != redisStopped {
+		runtime := redisRuntimeState.Load()
+		redisLifecycleLock.Unlock()
+		if runtime != nil {
+			return runtime.client, ErrRedisStarterAlreadyStarted
+		}
+		return nil, ErrRedisStarterAlreadyStarted
 	}
+	redisState = redisStarting
+	redisLifecycleLock.Unlock()
+	started := false
+	defer func() {
+		if !started {
+			redisLifecycleLock.Lock()
+			redisState = redisStopped
+			redisLifecycleLock.Unlock()
+		}
+	}()
+
 	config := r.getConfig()
-	redisClient = redis.NewUniversalClient(&config.UniversalOptions)
-	if err := r.ping(); err != nil {
-		closeAndClearRedisState()
+	client := redis.NewUniversalClient(&config.UniversalOptions)
+	if err := client.Ping(context.Background()).Err(); err != nil {
+		_ = client.Close()
 		return nil, err
 	}
-	setLockerClient(redislock.New(redisClient))
-	return redisClient, nil
+	runtime := &redisRuntime{client: client, locker: redislock.New(client)}
+	redisLifecycleLock.Lock()
+	redisRuntimeState.Store(runtime)
+	redisState = redisRunning
+	redisLifecycleLock.Unlock()
+	started = true
+	return client, nil
 }
 
 func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
-	client := redisClient
-	if client == nil {
+	redisLifecycleLock.Lock()
+	runtime := redisRuntimeState.Load()
+	if redisState != redisRunning || runtime == nil {
+		redisLifecycleLock.Unlock()
 		return false, true, ErrRedisClientNotStarted
 	}
+	redisRuntimeState.Store(nil)
+	redisState = redisStopping
+	redisLifecycleLock.Unlock()
+	client := runtime.client
 	ctx := context.Background()
 	if maxWaitTime > 0 {
 		var cancel context.CancelFunc
@@ -111,13 +149,19 @@ func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool
 	}
 	topicCmd.closeAll(ctx)
 	err = client.Close()
-	clearRedisState()
+	redisLifecycleLock.Lock()
+	redisState = redisStopped
+	redisLifecycleLock.Unlock()
 	return err == nil, true, err
 }
 
 // RawRedisClient 获取原始RedisClient进行操作
 func RawRedisClient() redis.UniversalClient {
-	return redisClient
+	runtime := redisRuntimeState.Load()
+	if runtime == nil {
+		return nil
+	}
+	return runtime.client
 }
 
 // RawLockerClient 获取原始RedisLockerClient进行操作
@@ -125,14 +169,6 @@ func RawLockerClient() *redislock.Client {
 	return rawLockerClient()
 }
 
-func clearRedisState() {
-	redisClient = nil
-	setLockerClient(nil)
-}
-
-func closeAndClearRedisState() {
-	if redisClient != nil {
-		_ = redisClient.Close()
-	}
-	clearRedisState()
+func rawRedisClient() redis.UniversalClient {
+	return RawRedisClient()
 }

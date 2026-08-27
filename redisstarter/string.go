@@ -21,7 +21,7 @@ func set(key RedisKey, value any, keyAppend ...any) error {
 	if value == nil {
 		return ErrNilValue
 	}
-	status := redisClient.Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
+	status := rawRedisClient().Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func set(key RedisKey, value any, keyAppend ...any) error {
 }
 
 func mset(data []any) error {
-	status := redisClient.MSet(context.Background(), data)
+	status := rawRedisClient().MSet(context.Background(), data)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func mset(data []any) error {
 }
 
 func get(key RedisKey, keyAppend ...any) (*redis.StringCmd, error) {
-	cmd := redisClient.Get(context.Background(), key.RawKeyString(keyAppend...))
+	cmd := rawRedisClient().Get(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}
@@ -47,7 +47,7 @@ func get(key RedisKey, keyAppend ...any) (*redis.StringCmd, error) {
 }
 
 func mget(keys ...string) (*redis.SliceCmd, error) {
-	slice := redisClient.MGet(context.Background(), keys...)
+	slice := rawRedisClient().MGet(context.Background(), keys...)
 	err := slice.Err()
 	if err != nil {
 		return nil, err
