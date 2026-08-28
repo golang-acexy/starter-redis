@@ -3,15 +3,12 @@ package redisstarter
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/bsm/redislock"
 )
 
 const defaultLockerOperationTimeout = 5 * time.Second
-
-var redisLockerClientMutex sync.RWMutex
 
 // Locker 封装一个由当前调用者持有的分布式锁。
 type Locker struct {
@@ -72,15 +69,11 @@ func currentLockerClient() (*redislock.Client, error) {
 }
 
 func rawLockerClient() *redislock.Client {
-	redisLockerClientMutex.RLock()
-	defer redisLockerClientMutex.RUnlock()
-	return redisLockerClient
-}
-
-func setLockerClient(client *redislock.Client) {
-	redisLockerClientMutex.Lock()
-	defer redisLockerClientMutex.Unlock()
-	redisLockerClient = client
+	runtime := redisRuntimeState.Load()
+	if runtime == nil {
+		return nil
+	}
+	return runtime.locker
 }
 
 func executeWithLock(ctx context.Context, key string, ttl time.Duration, opt *redislock.Options, executable func() error) (err error) {

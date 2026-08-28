@@ -8,6 +8,7 @@ var (
 	ErrNotStringValue           = errors.New("not a string value")
 	ErrAlreadySubscribedToTopic = errors.New("already subscribed to topic")
 	ErrNotSubscribedToTopic     = errors.New("not subscribed to topic")
+	ErrSubscriptionClosed       = errors.New("subscription closed during startup")
 	ErrUnknownRedisResponse     = errors.New("unknown redis response")
 	ErrRedisStarterAlreadyStarted = errors.New("redis starter already started")
 	ErrRedisClientNotStarted      = errors.New("redis client not started")

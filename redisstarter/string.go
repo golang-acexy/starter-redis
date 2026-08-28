@@ -3,7 +3,7 @@ package redisstarter
 import (
 	"context"
 
-	"github.com/acexy/golang-toolkit/logger"
+	"github.com/acexy/golang-toolkit/util/coll"
 	"github.com/acexy/golang-toolkit/util/gob"
 	"github.com/redis/go-redis/v9"
 )
@@ -17,11 +17,11 @@ func StringCmd() *cmdString {
 	return stringCmd
 }
 
-func set(key RedisKey, value interface{}, keyAppend ...interface{}) error {
+func set(key RedisKey, value any, keyAppend ...any) error {
 	if value == nil {
 		return ErrNilValue
 	}
-	status := redisClient.Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
+	status := rawRedisClient().Set(context.Background(), key.RawKeyString(keyAppend...), value, key.Expire)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -29,8 +29,8 @@ func set(key RedisKey, value interface{}, keyAppend ...interface{}) error {
 	return nil
 }
 
-func mset(data []interface{}) error {
-	status := redisClient.MSet(context.Background(), data)
+func mset(data []any) error {
+	status := rawRedisClient().MSet(context.Background(), data)
 	err := status.Err()
 	if err != nil {
 		return err
@@ -38,8 +38,8 @@ func mset(data []interface{}) error {
 	return nil
 }
 
-func get(key RedisKey, keyAppend ...interface{}) (*redis.StringCmd, error) {
-	cmd := redisClient.Get(context.Background(), key.RawKeyString(keyAppend...))
+func get(key RedisKey, keyAppend ...any) (*redis.StringCmd, error) {
+	cmd := rawRedisClient().Get(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}
@@ -47,7 +47,7 @@ func get(key RedisKey, keyAppend ...interface{}) (*redis.StringCmd, error) {
 }
 
 func mget(keys ...string) (*redis.SliceCmd, error) {
-	slice := redisClient.MGet(context.Background(), keys...)
+	slice := rawRedisClient().MGet(context.Background(), keys...)
 	err := slice.Err()
 	if err != nil {
 		return nil, err
@@ -56,24 +56,24 @@ func mget(keys ...string) (*redis.SliceCmd, error) {
 }
 
 // Set 设置字符串
-func (*cmdString) Set(key RedisKey, value string, keyAppend ...interface{}) error {
+func (*cmdString) Set(key RedisKey, value string, keyAppend ...any) error {
 	return set(key, []byte(value), keyAppend...)
 }
 
 // SetBytes 设置字节数据
-func (*cmdString) SetBytes(key RedisKey, value []byte, keyAppend ...interface{}) error {
+func (*cmdString) SetBytes(key RedisKey, value []byte, keyAppend ...any) error {
 	return set(key, value, keyAppend...)
 }
 
 // SetAny 原始RedisClient Set指令
 // 适用于设置基本类型 或 该值类型需要实现BinaryMarshaler的复杂结构体
-func (*cmdString) SetAny(key RedisKey, value interface{}, keyAppend ...interface{}) error {
+func (*cmdString) SetAny(key RedisKey, value any, keyAppend ...any) error {
 	return set(key, value, keyAppend...)
 }
 
 // SetAnyWithGob 设置其他类型值
 // 设置任何类型
-func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...interface{}) error {
+func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...any) error {
 	bytes, err := gob.Encode(value)
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (*cmdString) MSet(data map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
 	}
-	array := make([]interface{}, len(data)*2)
+	array := make([]any, len(data)*2)
 	index := 0
 	for k, v := range data {
 		array[index] = k
@@ -102,7 +102,7 @@ func (*cmdString) MSetWithHashTag(hashTag string, data map[string]string) error 
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
 	}
-	array := make([]interface{}, len(data)*2)
+	array := make([]any, len(data)*2)
 	index := 0
 	for k, v := range data {
 		array[index] = "{" + hashTag + "}" + k
@@ -118,7 +118,7 @@ func (*cmdString) MSetBytes(data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
 	}
-	array := make([]interface{}, len(data)*2)
+	array := make([]any, len(data)*2)
 	index := 0
 	for k, v := range data {
 		array[index] = k
@@ -134,7 +134,7 @@ func (*cmdString) MSetBytesWithHashTag(hashTag string, data map[string][]byte) e
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
 	}
-	array := make([]interface{}, len(data)*2)
+	array := make([]any, len(data)*2)
 	index := 0
 	for k, v := range data {
 		array[index] = "{" + hashTag + "}" + k
@@ -146,7 +146,7 @@ func (*cmdString) MSetBytesWithHashTag(hashTag string, data map[string][]byte) e
 }
 
 // Get 将指定的key以String类型获取
-func (*cmdString) Get(key RedisKey, keyAppend ...interface{}) (string, error) {
+func (*cmdString) Get(key RedisKey, keyAppend ...any) (string, error) {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
 		return "", err
@@ -176,7 +176,7 @@ func parseMGetStringValue(cmd *redis.SliceCmd, err error) ([]string, error) {
 }
 
 func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
-	if err != nil {
+	if err != nil || cmd == nil {
 		return nil, err
 	}
 	v, err := cmd.Result()
@@ -186,7 +186,11 @@ func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
 	k := make([][]byte, len(v))
 	for i, d := range v {
 		if d != nil {
-			k[i] = []byte(d.(string))
+			str, ok := d.(string)
+			if !ok {
+				return nil, ErrNotStringValue
+			}
+			k[i] = []byte(str)
 		}
 	}
 	return k, nil
@@ -205,19 +209,12 @@ func (*cmdString) MGetWithHashTag(hashTag string, keys ...string) ([]string, err
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
 	}
-	for index, key := range keys {
-		keys[index] = "{" + hashTag + "}" + key
-	}
-	return parseMGetStringValue(mget(keys...))
+	taggedKeys := withHashTag(hashTag, keys)
+	return parseMGetStringValue(mget(taggedKeys...))
 }
 
 // MGetBytes 一次性获取多个字节数组的值
 func (*cmdString) MGetBytes(keys ...string) ([][]byte, error) {
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Logrus().Errorf("painc %+v", err)
-		}
-	}()
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
 	}
@@ -226,22 +223,21 @@ func (*cmdString) MGetBytes(keys ...string) ([][]byte, error) {
 
 // MGetBytesWithHashTag 一次性获取多个字节数组的值
 func (*cmdString) MGetBytesWithHashTag(hashTag string, keys ...string) ([][]byte, error) {
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Logrus().Errorf("painc %+v", err)
-		}
-	}()
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
 	}
-	for index, key := range keys {
-		keys[index] = "{" + hashTag + "}" + key
-	}
-	return parseMGetBytesValue(mget(keys...))
+	taggedKeys := withHashTag(hashTag, keys)
+	return parseMGetBytesValue(mget(taggedKeys...))
+}
+
+func withHashTag(hashTag string, keys []string) []string {
+	return coll.SliceCollect(keys, func(key string) string {
+		return "{" + hashTag + "}" + key
+	})
 }
 
 // GetBytes 以字节形式获取指定的值
-func (*cmdString) GetBytes(key RedisKey, keyAppend ...interface{}) ([]byte, error) {
+func (*cmdString) GetBytes(key RedisKey, keyAppend ...any) ([]byte, error) {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
 		return nil, err
@@ -251,7 +247,7 @@ func (*cmdString) GetBytes(key RedisKey, keyAppend ...interface{}) ([]byte, erro
 
 // GetAny 以指定类型获取指定值
 // 适用于设置基本类型 或 该值类型需要实现BinaryUnmarshaler的复杂结构体
-func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...interface{}) error {
+func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...any) error {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
 		return err
@@ -260,7 +256,7 @@ func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...interface{}) erro
 }
 
 // GetAnyWithGob 以Gob反序列化形式获取指定值
-func (t *cmdString) GetAnyWithGob(key RedisKey, value any, keyAppend ...interface{}) error {
+func (t *cmdString) GetAnyWithGob(key RedisKey, value any, keyAppend ...any) error {
 	bytes, err := t.GetBytes(key, keyAppend...)
 	if err != nil {
 		return err
