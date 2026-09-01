@@ -47,9 +47,10 @@ func TestParseMGetStringValuePreservesMissingValue(t *testing.T) {
 }
 
 func TestTopicCloseAllInvalidatesPendingSubscription(t *testing.T) {
+	pending := &topicPending{ready: make(chan struct{})}
 	cmd := &cmdTopic{
-		pubSubs: map[string]*redis.PubSub{},
-		pending: map[string]struct{}{"topic": {}},
+		pubSubs: make(map[string]*topicSubscription),
+		pending: map[string]*topicPending{"topic": pending},
 	}
 
 	cmd.closeAll(context.Background())
@@ -57,8 +58,79 @@ func TestTopicCloseAllInvalidatesPendingSubscription(t *testing.T) {
 	if cmd.generation != 1 {
 		t.Fatalf("期望订阅代次递增，实际为 %d", cmd.generation)
 	}
-	if _, ok := cmd.pending["topic"]; !ok {
-		t.Fatal("进行中的订阅应由发起方完成清理")
+	select {
+	case <-pending.ready:
+	default:
+		t.Fatal("关闭 Starter 时应唤醒等待底层订阅的重复订阅者")
+	}
+	if !errors.Is(pending.err, ErrSubscriptionClosed) {
+		t.Fatalf("期望 ErrSubscriptionClosed，实际为 %v", pending.err)
+	}
+}
+
+func TestTopicSubscribeReturnsErrorWhenRedisIsNotStarted(t *testing.T) {
+	previous := redisRuntimeState.Swap(nil)
+	defer redisRuntimeState.Store(previous)
+
+	cmd := &cmdTopic{
+		pubSubs: make(map[string]*topicSubscription),
+		pending: make(map[string]*topicPending),
+	}
+	key := NewRedisKey("topic")
+
+	_, err := cmd.Subscribe(context.Background(), key)
+	if !errors.Is(err, ErrRedisClientNotStarted) {
+		t.Fatalf("期望 ErrRedisClientNotStarted，实际为 %v", err)
+	}
+	if _, ok := cmd.pending[key.RawKeyString()]; ok {
+		t.Fatal("订阅失败后不应保留 pending 标记")
+	}
+}
+
+func TestSubscribeRepeatUsesIndependentLocalChannels(t *testing.T) {
+	key := NewRedisKey("topic")
+	baseSubscriber := &topicSubscriber{
+		messages: make(chan *redis.Message, topicSubscriberChannelSize),
+		done:     make(chan struct{}),
+	}
+	subscription := &topicSubscription{
+		subscribers: map[uint64]*topicSubscriber{1: baseSubscriber},
+	}
+	cmd := &cmdTopic{
+		pubSubs:          map[string]*topicSubscription{key.RawKeyString(): subscription},
+		pending:          make(map[string]*topicPending),
+		nextSubscriberID: 1,
+	}
+
+	ctx, cancelContext := context.WithCancel(context.Background())
+	defer cancelContext()
+	messages, cancel, err := cmd.SubscribeRepeat(ctx, key)
+	if err != nil {
+		t.Fatalf("重复订阅失败: %v", err)
+	}
+
+	message := &redis.Message{Payload: "message"}
+	if !cmd.deliverMessage(key.RawKeyString(), subscription, message) {
+		t.Fatal("活动订阅应允许分发消息")
+	}
+	for _, channel := range []<-chan *redis.Message{baseSubscriber.messages, messages} {
+		select {
+		case received := <-channel:
+			if received != message {
+				t.Fatalf("收到意外消息: %#v", received)
+			}
+		default:
+			t.Fatal("每个本地订阅者都应收到消息")
+		}
+	}
+
+	cancel()
+	_, open := <-messages
+	if open {
+		t.Fatal("取消重复订阅后，其消息通道应关闭")
+	}
+	if len(subscription.subscribers) != 1 {
+		t.Fatalf("取消重复订阅不应影响其他订阅者，实际数量为 %d", len(subscription.subscribers))
 	}
 }
 
