@@ -30,16 +30,19 @@ const (
 	redisStopping
 )
 
+// RedisKey combines key formatting and optional expiration. Treat shared definitions as read-only.
+// Expire is command-specific, not a universal sliding TTL; locks use it as a lease duration.
 type RedisKey struct {
 
-	// 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
+	// KeyFormat is used by fmt.Sprintf when arguments are present; no arguments return it verbatim.
 	KeyFormat string
-	// Key 过期时间(如果可以设置) 当该RedisKey作用与Locker时，该时间指明了自动释放锁时间 如果为零值则会立即失败
+	// Expire is command-specific. String writes support redis.KeepTTL; locks require a positive lease and
+	// the driver truncates it to milliseconds.
 	Expire time.Duration
 }
 
-// NewRedisKey 创建一个RedisKey
-// keyFormat 最终key值的格式化格式 将使用 fmt.Sprintf(key.KeyFormat, keyAppend) 进行处理
+// NewRedisKey creates a key definition; only the first optional expiry is used, with zero as the
+// default. It does not validate formatting or duration.
 func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
 	key := RedisKey{
 		KeyFormat: keyFormat,
@@ -50,7 +53,8 @@ func NewRedisKey(keyFormat string, expire ...time.Duration) RedisKey {
 	return key
 }
 
-// RawKeyString 获取原始key字符串
+// RawKeyString returns KeyFormat unchanged without arguments, otherwise applies fmt.Sprintf without
+// placeholder validation.
 func (r RedisKey) RawKeyString(keyAppend ...any) string {
 	if len(keyAppend) > 0 {
 		return fmt.Sprintf(r.KeyFormat, keyAppend...)
@@ -58,15 +62,28 @@ func (r RedisKey) RawKeyString(keyAppend ...any) string {
 	return r.KeyFormat
 }
 
+// RedisConfig supplies driver connection settings and a parent-managed initialization callback.
 type RedisConfig struct {
+	// UniversalOptions selects standalone, Sentinel, or Cluster behavior; nested option data is not deeply
+	// copied.
 	redis.UniversalOptions
+	// InitFunc runs through the default parent settings after startup; direct Start or custom RedisSetting
+	// does not invoke it automatically.
 	InitFunc func(instance redis.UniversalClient)
 }
 
+// RedisStarter manages one process-wide Redis client and lock client.
+// Configure before use and serialize configuration resolution; its cached config
+// is not protected against concurrent first reads or later mutations. Normal use
+// is one startup and one shutdown; default parent settings reject restart.
 type RedisStarter struct {
-	Config       RedisConfig
-	LazyConfig   func() RedisConfig
-	config       *RedisConfig
+	// Config supplies static options when LazyConfig is nil.
+	Config RedisConfig
+	// LazyConfig overrides Config and is evaluated once at first resolution, which may occur during Setting
+	// before Start.
+	LazyConfig func() RedisConfig
+	config     *RedisConfig
+	// RedisSetting overrides all parent lifecycle settings, including the default InitFunc callback.
 	RedisSetting *parent.Setting
 }
 
@@ -82,6 +99,10 @@ func (r *RedisStarter) getConfig() *RedisConfig {
 	}
 	return r.config
 }
+
+// Setting returns custom settings or defaults that disable restart, stop asynchronously at priority 19,
+// and wait ten seconds. Default resolution caches config and delegates InitFunc to the parent callback;
+// custom settings replace that callback.
 func (r *RedisStarter) Setting() *parent.Setting {
 	if r.RedisSetting != nil {
 		return r.RedisSetting
@@ -94,6 +115,9 @@ func (r *RedisStarter) Setting() *parent.Setting {
 	})
 }
 
+// Start creates and pings the process-wide client, then returns the borrowed redis.UniversalClient.
+// Failed health checks close the candidate. Ping uses a background context and driver timeouts; direct
+// Start does not invoke InitFunc. Configure before use and keep one lifecycle owner.
 func (r *RedisStarter) Start() (any, error) {
 	redisLifecycleLock.Lock()
 	if redisState != redisStopped {
@@ -130,6 +154,9 @@ func (r *RedisStarter) Start() (any, error) {
 	return client, nil
 }
 
+// Stop withdraws the runtime, cancels topics, and closes the shared client. Positive maxWaitTime bounds
+// topic cleanup only; nonpositive values use no context deadline. Client.Close is not forcibly timed
+// out. It returns stopped=true even on close error; inactive runtime returns ErrRedisClientNotStarted.
 func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool, err error) {
 	redisLifecycleLock.Lock()
 	runtime := redisRuntimeState.Load()
@@ -155,7 +182,8 @@ func (r *RedisStarter) Stop(maxWaitTime time.Duration) (gracefully, stopped bool
 	return err == nil, true, err
 }
 
-// RawRedisClient 获取原始RedisClient进行操作
+// RawRedisClient returns the starter-owned client or nil when unavailable. Lookup is synchronized, but
+// the borrowed client can close afterward; do not close it or use it beyond the starter lifetime.
 func RawRedisClient() redis.UniversalClient {
 	runtime := redisRuntimeState.Load()
 	if runtime == nil {
@@ -164,7 +192,8 @@ func RawRedisClient() redis.UniversalClient {
 	return runtime.client
 }
 
-// RawLockerClient 获取原始RedisLockerClient进行操作
+// RawLockerClient returns the starter-owned lock client or nil when unavailable. Do not treat lookup as
+// a lifetime guarantee; individual acquired leases remain caller-owned.
 func RawLockerClient() *redislock.Client {
 	return rawLockerClient()
 }

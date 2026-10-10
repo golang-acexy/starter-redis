@@ -11,35 +11,64 @@ type cmdBloom struct {
 
 var bloomCmd = new(cmdBloom)
 
+// BloomCmd returns shared Bloom helpers requiring RedisBloom BF.* support and a running starter. Calls
+// can panic before startup, use background contexts, and do not apply key.Expire.
 func BloomCmd() *cmdBloom {
 	return bloomCmd
 }
 
+// BloomInfo contains server-reported filter statistics; item counts are probabilistic, not exact
+// business cardinality.
 type BloomInfo struct {
-	// 初始容量
+	// Capacity is the total reported item capacity across sub-filters.
 	Capacity int64
-	// 底层大小bit
+	// Size is allocated memory in bytes, not bits.
 	Size int64
-	// 分片数量
+	// NumberOfFilters is the number of sub-filters.
 	NumberOfFilters int64
-	// 已插入总元素
+	// NumberOfItemsInserted counts additions detected as new, not exact distinct business items.
 	NumberOfItemsInserted int64
-	// 拓展速率
+	// ExpansionRate is the configured scaling factor.
 	ExpansionRate int64
 }
 
-// Reserve 创建布隆过滤器
+// Reserve creates a Bloom filter; errorRate and capacity are forwarded for server validation. An
+// existing key can fail; no expiration is installed.
 func (*cmdBloom) Reserve(key RedisKey, errorRate float64, capacity int64, keyAppend ...any) error {
 	return rawRedisClient().Do(context.Background(), "BF.RESERVE", key.RawKeyString(keyAppend...), errorRate, capacity).Err()
 }
 
-// Info 布隆过滤器信息
+// Info reads Bloom statistics from RESP2 arrays or RESP3 maps. Malformed replies or invalid field
+// values return ErrUnknownRedisResponse; command errors are preserved.
 func (*cmdBloom) Info(key RedisKey, keyAppend ...any) (*BloomInfo, error) {
 	result, err := rawRedisClient().Do(context.Background(), "BF.INFO", key.RawKeyString(keyAppend...)).Result()
 	if err != nil {
 		return nil, err
 	}
+	return parseBloomInfo(result)
+}
+
+// parseBloomInfo normalizes RESP2 field/value pairs before validating the required statistics.
+func parseBloomInfo(result any) (*BloomInfo, error) {
+	if values, ok := result.([]any); ok {
+		if len(values)%2 != 0 {
+			return nil, ErrUnknownRedisResponse
+		}
+		fields := make(map[any]any, len(values)/2)
+		for index := 0; index < len(values); index += 2 {
+			name, ok := values[index].(string)
+			if !ok {
+				return nil, ErrUnknownRedisResponse
+			}
+			if _, exists := fields[name]; exists {
+				return nil, ErrUnknownRedisResponse
+			}
+			fields[name] = values[index+1]
+		}
+		result = fields
+	}
 	mapResult, ok := result.(map[any]any)
+
 	if !ok {
 		return nil, ErrUnknownRedisResponse
 	}
@@ -72,12 +101,14 @@ func (*cmdBloom) Info(key RedisKey, keyAppend ...any) (*BloomInfo, error) {
 	}, nil
 }
 
-// Add 向布隆过滤器中添加元素
+// Add adds one value; duplicate or probably-present status is discarded, and only command errors are
+// returned.
 func (*cmdBloom) Add(key RedisKey, value string, keyAppend ...any) error {
 	return rawRedisClient().Do(context.Background(), "BF.ADD", key.RawKeyString(keyAppend...), value).Err()
 }
 
-// MAdd 向布隆过滤器中批量添加元素
+// MAdd adds values in one command; per-item insertion status is discarded. Empty input is passed to
+// Redis and may cause a command error.
 func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...any) error {
 	args := make([]any, 0)
 	args = append(args, "BF.MADD")
@@ -88,12 +119,14 @@ func (*cmdBloom) MAdd(key RedisKey, values []string, keyAppend ...any) error {
 	return rawRedisClient().Do(context.Background(), args...).Err()
 }
 
-// Exists 检查元素是否存在
+// Exists reports probabilistic membership with possible false positives; it is not proof of business
+// existence.
 func (*cmdBloom) Exists(key RedisKey, value string, keyAppend ...any) (bool, error) {
 	return rawRedisClient().Do(context.Background(), "BF.EXISTS", key.RawKeyString(keyAppend...), value).Bool()
 }
 
-// MExists 检查多个元素是否存在
+// MExists reports probabilistic membership in input order; empty input is passed to Redis and may cause
+// a command error.
 func (*cmdBloom) MExists(key RedisKey, values []string, keyAppend ...any) ([]bool, error) {
 	args := make([]any, 0)
 	args = append(args, "BF.MEXISTS")

@@ -14,11 +14,13 @@ type cmdList struct {
 
 var listCmd = new(cmdList)
 
+// ListCmd returns shared list helpers. Calls require a running starter and can panic otherwise. Push and
+// length use background contexts; none of these methods apply key.Expire.
 func ListCmd() *cmdList {
 	return listCmd
 }
 
-// LLen 获取队列长度
+// LLen returns list length, zero for an absent key, and also zero on driver error.
 func (*cmdList) LLen(key RedisKey, keyAppend ...any) int64 {
 	result := rawRedisClient().LLen(context.Background(), key.RawKeyString(keyAppend...))
 	if result.Err() != nil {
@@ -27,7 +29,8 @@ func (*cmdList) LLen(key RedisKey, keyAppend ...any) int64 {
 	return result.Val()
 }
 
-// Push 数据入队
+// Push pushes one value to the right when directionRight is true, otherwise left. It does not apply
+// key.Expire.
 func (*cmdList) Push(directionRight bool, key RedisKey, data string, keyAppend ...any) error {
 	if directionRight {
 		return rawRedisClient().RPush(context.Background(), key.RawKeyString(keyAppend...), data).Err()
@@ -35,9 +38,10 @@ func (*cmdList) Push(directionRight bool, key RedisKey, data string, keyAppend .
 	return rawRedisClient().LPush(context.Background(), key.RawKeyString(keyAppend...), data).Err()
 }
 
-// BPop 数据出队
-// directionRight: true 从右出，false 从左出
-// timeout: 向队列获取数据的最大等待时间，0 为永久阻塞
+// BPop starts an unbuffered pop stream using a non-nil context. True pops right, false pops left; zero
+// timeout asks Redis to block indefinitely. Errors are logged and retried, with a five-second delay
+// after non-timeout failures. Drain the stream or cancel; in-flight read interruption depends on driver
+// settings. A popped item can be lost if cancellation prevents channel delivery.
 func (*cmdList) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...any) <-chan string {
 	keyString := key.RawKeyString(keyAppend...)
 	client := rawRedisClient()
