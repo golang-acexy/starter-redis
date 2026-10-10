@@ -13,6 +13,9 @@ type cmdString struct {
 
 var stringCmd = new(cmdString)
 
+// StringCmd returns shared string helpers. Calls require a running starter and can panic otherwise;
+// concurrent calls need stable caller-owned inputs. Commands use background contexts, and batch writes
+// do not set expiration.
 func StringCmd() *cmdString {
 	return stringCmd
 }
@@ -55,24 +58,26 @@ func mget(keys ...string) (*redis.SliceCmd, error) {
 	return slice, nil
 }
 
-// Set 设置字符串
+// Set stores text using key.Expire; zero writes without expiration and redis.KeepTTL retains an existing
+// TTL. Empty text is allowed and driver errors are returned.
 func (*cmdString) Set(key RedisKey, value string, keyAppend ...any) error {
 	return set(key, []byte(value), keyAppend...)
 }
 
-// SetBytes 设置字节数据
+// SetBytes stores bytes using key.Expire; a typed nil byte slice is passed to the driver. Do not mutate
+// bytes during the call.
 func (*cmdString) SetBytes(key RedisKey, value []byte, keyAppend ...any) error {
 	return set(key, value, keyAppend...)
 }
 
-// SetAny 原始RedisClient Set指令
-// 适用于设置基本类型 或 该值类型需要实现BinaryMarshaler的复杂结构体
+// SetAny stores a driver-supported scalar or BinaryMarshaler value using key.Expire. A nil interface
+// returns ErrNilValue; complex values require supported encoding.
 func (*cmdString) SetAny(key RedisKey, value any, keyAppend ...any) error {
 	return set(key, value, keyAppend...)
 }
 
-// SetAnyWithGob 设置其他类型值
-// 设置任何类型
+// SetAnyWithGob Gob-encodes the value before storing with key.Expire; encoding and driver errors are
+// returned.
 func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...any) error {
 	bytes, err := gob.Encode(value)
 	if err != nil {
@@ -81,7 +86,8 @@ func (*cmdString) SetAnyWithGob(key RedisKey, value any, keyAppend ...any) error
 	return set(key, bytes, keyAppend...)
 }
 
-// MSet 批量设置字符串
+// MSet stores raw key/text pairs without TTL; nil or empty input returns ErrNilValue. Cluster routing
+// and cross-slot behavior belong to the driver.
 func (*cmdString) MSet(data map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
@@ -97,7 +103,9 @@ func (*cmdString) MSet(data map[string]string) error {
 	return mset(array)
 }
 
-// MSetWithHashTag 批量设置字符串 用于在集群模式指定hashTag将key分配在同一个hash槽中
+// MSetWithHashTag stores pairs using keys prefixed with {hashTag}, without TTL. Empty input returns
+// ErrNilValue; hashTag is not validated, so use a non-empty tag without braces for predictable slot
+// grouping.
 func (*cmdString) MSetWithHashTag(hashTag string, data map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
@@ -113,7 +121,8 @@ func (*cmdString) MSetWithHashTag(hashTag string, data map[string]string) error 
 	return mset(array)
 }
 
-// MSetBytes 批量设置字节数据
+// MSetBytes stores raw key/byte pairs without TTL; nil or empty input returns ErrNilValue. Keep map and
+// buffers unchanged during use.
 func (*cmdString) MSetBytes(data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
@@ -129,7 +138,8 @@ func (*cmdString) MSetBytes(data map[string][]byte) error {
 	return mset(array)
 }
 
-// MSetBytesWithHashTag 批量设置字节数据
+// MSetBytesWithHashTag stores byte pairs using keys prefixed with {hashTag}, without TTL. Empty input
+// returns ErrNilValue; tag contents are not validated and buffers remain caller-owned.
 func (*cmdString) MSetBytesWithHashTag(hashTag string, data map[string][]byte) error {
 	if data == nil || len(data) == 0 {
 		return ErrNilValue
@@ -145,7 +155,7 @@ func (*cmdString) MSetBytesWithHashTag(hashTag string, data map[string][]byte) e
 	return mset(array)
 }
 
-// Get 将指定的key以String类型获取
+// Get reads text and returns redis.Nil for an absent key; other driver errors are preserved.
 func (*cmdString) Get(key RedisKey, keyAppend ...any) (string, error) {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
@@ -196,7 +206,8 @@ func parseMGetBytesValue(cmd *redis.SliceCmd, err error) ([][]byte, error) {
 	return k, nil
 }
 
-// MGet 一次性获取多个String类型的值
+// MGet reads raw keys in input order; missing values become empty strings and cannot be distinguished
+// from stored empty text. Empty input returns ErrNilKeys.
 func (*cmdString) MGet(keys ...string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
@@ -204,7 +215,8 @@ func (*cmdString) MGet(keys ...string) ([]string, error) {
 	return parseMGetStringValue(mget(keys...))
 }
 
-// MGetWithHashTag 一次性获取多个String类型的值
+// MGetWithHashTag reads keys prefixed with {hashTag} in input order; missing values become empty
+// strings. Empty input returns ErrNilKeys and tag contents are not validated.
 func (*cmdString) MGetWithHashTag(hashTag string, keys ...string) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
@@ -213,7 +225,8 @@ func (*cmdString) MGetWithHashTag(hashTag string, keys ...string) ([]string, err
 	return parseMGetStringValue(mget(taggedKeys...))
 }
 
-// MGetBytes 一次性获取多个字节数组的值
+// MGetBytes reads raw keys in input order; absent values remain nil byte slices. Empty input returns
+// ErrNilKeys.
 func (*cmdString) MGetBytes(keys ...string) ([][]byte, error) {
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
@@ -221,7 +234,8 @@ func (*cmdString) MGetBytes(keys ...string) ([][]byte, error) {
 	return parseMGetBytesValue(mget(keys...))
 }
 
-// MGetBytesWithHashTag 一次性获取多个字节数组的值
+// MGetBytesWithHashTag reads keys prefixed with {hashTag}; absent values remain nil byte slices. Empty
+// input returns ErrNilKeys and input keys are not modified.
 func (*cmdString) MGetBytesWithHashTag(hashTag string, keys ...string) ([][]byte, error) {
 	if len(keys) == 0 {
 		return nil, ErrNilKeys
@@ -236,7 +250,7 @@ func withHashTag(hashTag string, keys []string) []string {
 	})
 }
 
-// GetBytes 以字节形式获取指定的值
+// GetBytes reads bytes and preserves redis.Nil for an absent key; returned data belongs to the caller.
 func (*cmdString) GetBytes(key RedisKey, keyAppend ...any) ([]byte, error) {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
@@ -245,8 +259,8 @@ func (*cmdString) GetBytes(key RedisKey, keyAppend ...any) ([]byte, error) {
 	return cmd.Bytes()
 }
 
-// GetAny 以指定类型获取指定值
-// 适用于设置基本类型 或 该值类型需要实现BinaryUnmarshaler的复杂结构体
+// GetAny scans a driver-encoded value into a non-nil supported destination pointer. It preserves
+// missing-key and scan errors; Gob values need GetAnyWithGob.
 func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...any) error {
 	cmd, err := get(key, keyAppend...)
 	if err != nil || cmd == nil {
@@ -255,7 +269,8 @@ func (*cmdString) GetAny(key RedisKey, value any, keyAppend ...any) error {
 	return cmd.Scan(value)
 }
 
-// GetAnyWithGob 以Gob反序列化形式获取指定值
+// GetAnyWithGob decodes a Gob value into the supplied non-nil destination pointer; read and decoding
+// errors are returned.
 func (t *cmdString) GetAnyWithGob(key RedisKey, value any, keyAppend ...any) error {
 	bytes, err := t.GetBytes(key, keyAppend...)
 	if err != nil {

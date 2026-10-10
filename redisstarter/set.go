@@ -11,6 +11,9 @@ type cmdSet struct {
 
 var setCmd = new(cmdSet)
 
+// SetCmd returns shared set helpers. Calls require a running starter and can panic otherwise; concurrent
+// calls need stable inputs. Commands use background contexts; positive-expiry
+// writes use Lua, preserve existing expiration, and return script errors.
 func SetCmd() *cmdSet {
 	return setCmd
 }
@@ -20,14 +23,12 @@ func sAdd(key RedisKey, value []any, keyAppend ...any) error {
 		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
+	if key.Expire > 0 {
+		return writeWithInitialExpiry("SADD", originKey, key.Expire, value)
+	}
 	cmd := rawRedisClient().SAdd(context.Background(), originKey, value...)
 	if cmd.Err() != nil {
 		return cmd.Err()
-	}
-	if key.Expire > 0 {
-		if keyCmd.Ttl(key, keyAppend...) < 0 {
-			keyCmd.Expire(key, key.Expire, keyAppend...)
-		}
 	}
 	return nil
 }
@@ -37,12 +38,15 @@ func sRem(key RedisKey, value []any, keyAppend ...any) *redis.IntCmd {
 	return rawRedisClient().SRem(context.Background(), originKey, value...)
 }
 
-// SAdd 增加单个元素
+// SAdd adds one member; duplicates are harmless. Positive key.Expire is installed only when the key
+// has no expiration, atomically with the write using Lua. Existing expiry is preserved and errors
+// are returned; Lua errors do not roll back writes. Expiry has whole-second precision and a one-second minimum.
 func (*cmdSet) SAdd(key RedisKey, value any, keyAppend ...any) error {
 	return sAdd(key, []any{value}, keyAppend...)
 }
 
-// SAdds 增加多个元素
+// SAdds adds members; nil or empty input returns ErrNilValue. Expiration follows SAdd,
+// and input must stay unchanged during use.
 func (*cmdSet) SAdds(key RedisKey, value []any, keyAppend ...any) error {
 	if len(value) == 0 {
 		return ErrNilValue
@@ -54,7 +58,7 @@ func (*cmdSet) SAdds(key RedisKey, value []any, keyAppend ...any) error {
 	return sAdd(key, slice, keyAppend...)
 }
 
-// SRem 删除单个元素
+// SRem removes one member and returns the removal count; absent members return zero.
 func (*cmdSet) SRem(key RedisKey, value any, keyAppend ...any) (int64, error) {
 	originKey := key.RawKeyString(keyAppend...)
 	cmd := rawRedisClient().SRem(context.Background(), originKey, value)
@@ -64,7 +68,7 @@ func (*cmdSet) SRem(key RedisKey, value any, keyAppend ...any) (int64, error) {
 	return cmd.Val(), nil
 }
 
-// SRems 删除多个元素
+// SRems removes multiple members; empty input is passed to Redis and may cause a command error.
 func (*cmdSet) SRems(key RedisKey, value []any, keyAppend ...any) (int64, error) {
 	originKey := key.RawKeyString(keyAppend...)
 	cmd := rawRedisClient().SRem(context.Background(), originKey, value...)
@@ -74,7 +78,7 @@ func (*cmdSet) SRems(key RedisKey, value []any, keyAppend ...any) (int64, error)
 	return cmd.Val(), nil
 }
 
-// SCard 获取集合元素个数
+// SCard returns member count, including zero for an absent key; driver errors are returned.
 func (*cmdSet) SCard(key RedisKey, keyAppend ...any) (int64, error) {
 	cmd := rawRedisClient().SCard(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
@@ -83,7 +87,7 @@ func (*cmdSet) SCard(key RedisKey, keyAppend ...any) (int64, error) {
 	return cmd.Val(), nil
 }
 
-// SMembers 获取集合元素
+// SMembers returns all members in unspecified order; an absent key yields an empty result.
 func (*cmdSet) SMembers(key RedisKey, keyAppend ...any) ([]string, error) {
 	cmd := rawRedisClient().SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
@@ -92,7 +96,8 @@ func (*cmdSet) SMembers(key RedisKey, keyAppend ...any) ([]string, error) {
 	return cmd.Val(), nil
 }
 
-// SMembersScan 获取集合元素
+// SMembersScan fetches all members and scans them into a non-nil supported slice pointer. It does not
+// perform cursor-based Redis SCAN.
 func (*cmdSet) SMembersScan(key RedisKey, value any, keyAppend ...any) error {
 	cmd := rawRedisClient().SMembers(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {
@@ -101,7 +106,8 @@ func (*cmdSet) SMembersScan(key RedisKey, value any, keyAppend ...any) error {
 	return cmd.ScanSlice(value)
 }
 
-// SMembersMap 获取集合元素 作用是通过map key去重复
+// SMembersMap returns members as map keys; an absent key yields an empty result and driver errors are
+// preserved.
 func (*cmdSet) SMembersMap(key RedisKey, keyAppend ...any) (map[string]struct{}, error) {
 	cmd := rawRedisClient().SMembersMap(context.Background(), key.RawKeyString(keyAppend...))
 	if cmd.Err() != nil {

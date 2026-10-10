@@ -40,13 +40,13 @@ if err := loader.Start(); err != nil {
 }
 ```
 
-Use `LazyConfig` when configuration must be resolved immediately before startup. It takes precedence over `Config`.
+Use `LazyConfig` to resolve configuration on first use. It takes precedence over `Config` and may be evaluated during parent settings lookup before startup. Configuration is cached; configure the starter before use. `InitFunc` runs through the default parent settings, so custom `RedisSetting` must provide any required initialization callback itself.
 
 The starter validates the connection with `PING`, creates the distributed-lock client, and exposes both clients only after successful startup. Stop Redis through the parent loader so Pub/Sub subscriptions and pooled connections are closed together.
 
 ## Redis Keys
 
-All grouped command APIs accept `RedisKey`, keeping key formatting and expiration policy close to the key definition:
+Key-based grouped operations accept `RedisKey`; batch string commands also accept raw string keys:
 
 ```go
 var UserSessionKey = redisstarter.NewRedisKey("user:session:%d", 30*time.Minute)
@@ -54,7 +54,7 @@ var UserSessionKey = redisstarter.NewRedisKey("user:session:%d", 30*time.Minute)
 rawKey := UserSessionKey.RawKeyString(1001)
 ```
 
-Key arguments are formatted with `fmt.Sprintf(KeyFormat, keyArgs...)`. A zero expiration means no automatic expiration for normal data commands; lock APIs require a valid lock duration where documented.
+Key arguments are formatted with `fmt.Sprintf(KeyFormat, keyArgs...)`. Expiration is command-specific: string writes use it, hash/set writes atomically install initial expiration without refreshing existing TTL, and list/sorted-set/Bloom operations ignore it. Batch string writes do not set TTL. Lock acquisition requires a positive duration.
 
 ## Command Groups
 
@@ -72,19 +72,18 @@ Commands are grouped by Redis data structure:
 Example:
 
 ```go
-ctx := context.Background()
 key := redisstarter.NewRedisKey("profile:%d", time.Hour)
 
-if err := redisstarter.StringCmd().Set(ctx, key, profileJSON, userID); err != nil {
+if err := redisstarter.StringCmd().Set(key, profileJSON, userID); err != nil {
     return err
 }
 
-value, err := redisstarter.StringCmd().Get(ctx, key, userID)
+value, err := redisstarter.StringCmd().Get(key, userID)
 ```
 
 ## Pub/Sub
 
-`TopicCmd` manages subscriptions using the shared Redis client. Define stable topic keys and ensure the starter remains active for the complete subscription lifetime. Parent-managed shutdown closes registered subscriptions before closing the client.
+`TopicCmd` manages subscriptions using the shared Redis client. Define stable topic keys and ensure the starter remains active for the complete subscription lifetime. Parent-managed shutdown closes registered subscriptions before closing the client. `SubscribeRepeat` gives each caller a separate channel and cancellation function. Slow consumers can lose events; received message pointers are shared and should be treated as read-only. Retry subscriptions do not replay missed messages.
 
 ## Distributed Locks
 
@@ -93,6 +92,7 @@ The starter wraps `bsm/redislock` and provides callback and explicit-lock styles
 ```go
 lockKey := redisstarter.NewRedisKey("lock:order:%d", 10*time.Second)
 
+ctx := context.Background()
 err := redisstarter.TryLockWithContext(ctx, lockKey, func() error {
     // Execute the protected operation and return its error.
     return nil
@@ -102,7 +102,7 @@ if err != nil {
 }
 ```
 
-The callback executes synchronously. The returned error includes callback and unlock failures. Use `ObtainLockerWithContext` when the caller must control unlock timing or refresh a long-running lock. Advanced lock token and metadata settings are available through the corresponding `WithOptions` APIs. `LockWithMaxRetry` and `LockWithDeadline` support bounded retry policies. Always choose an expiration longer than the expected protected operation and propagate cancellation through context-aware APIs.
+The callback executes synchronously. The returned error includes callback and unlock failures. Use `ObtainLockerWithContext` when the caller must control unlock timing or refresh a long-running lock. Advanced lock token and metadata settings are available through the corresponding `WithOptions` APIs. `LockWithMaxRetry` and `LockWithDeadline` support bounded retry policies. Locks do not automatically renew or stop callback execution on context cancellation. Explicitly refresh long-running leases and account for ownership loss before business work completes. Release uses a separate bounded context so acquisition cancellation does not prevent cleanup.
 
 ## Raw Access
 
@@ -117,13 +117,14 @@ Raw access is intended for Redis commands not covered by the grouped APIs. The s
 
 Reusable lifecycle and lock errors are declared in `redisstarter/error.go`. In particular, operations require a started Redis client, duplicate startup is rejected, and lock acquisition can fail because of contention, cancellation, or invalid configuration.
 
-## Design Notes
+## Usage Constraints
 
 - One process owns one Redis universal client and one lock client.
 - The starter accepts the same endpoint models as `redis.UniversalOptions`, including standalone, Sentinel, and Cluster configurations.
-- Standard commands use explicit contexts and centralized `RedisKey` definitions.
+- Most grouped data commands use background contexts. Use raw contextual commands when deadlines or cancellation are required. Older helpers can panic before startup; scalar results may hide command errors.
+- Positive-expiry hash/set writes require Lua execution plus TTL and EXPIRE permissions. Script errors are returned; Redis does not roll back writes already completed within a failing script.
 - The standard Redis starter does not allow parent-managed restart after successful shutdown.
-- Use `cloud-cache` instead of building application cache synchronization directly on Pub/Sub.
+- RedisBloom commands require BF.* server support; Bloom membership can have false positives. `BloomCmd().Info` supports both RESP2 array replies and RESP3 map replies.
 
 ## Testing
 

@@ -17,20 +17,18 @@ type cmdTopic struct {
 	pubSubsMutex     sync.Mutex
 }
 
-// topicSubscription 表示一个 Redis topic 的底层订阅及其本地订阅者。
-// 同一 topic 只建立一个 Redis PubSub 连接，收到的消息会扇出给每个本地订阅者。
+// topicSubscription fans one Redis transport out to independent local subscriber channels.
 type topicSubscription struct {
 	pubSub      *redis.PubSub
 	subscribers map[uint64]*topicSubscriber
 }
 
-// topicPending 表示正在建立的底层订阅。重复订阅会等待该订阅完成，避免并发创建连接。
+// topicPending lets repeat subscribers await one shared subscription attempt.
 type topicPending struct {
 	ready chan struct{}
 	err   error
 }
 
-// topicSubscriber 是一个本地订阅者。messages 关闭表示订阅已取消或底层订阅已结束。
 type topicSubscriber struct {
 	messages chan *redis.Message
 	done     chan struct{}
@@ -45,30 +43,32 @@ var topicCmd = &cmdTopic{
 	pending: make(map[string]*topicPending),
 }
 
+// TopicCmd returns the shared topic manager. Subscription operations coordinate concurrent callers; keep
+// the starter alive for the subscription lifetime. Publish uses a background context and can panic
+// before startup.
 func TopicCmd() *cmdTopic {
 	return topicCmd
 }
 
-// Publish 发布消息
+// Publish publishes a payload without TTL or delivery acknowledgment; subscriber count is discarded and
+// driver errors are returned.
 func (c *cmdTopic) Publish(key RedisKey, data string, keyAppend ...any) error {
 	keyString := key.RawKeyString(keyAppend...)
 	return rawRedisClient().Publish(context.Background(), keyString, data).Err()
 }
 
-// Subscribe 订阅消息。每个 topic 仅允许一次基础订阅；需要多个本地订阅者时使用 SubscribeRepeat。
+// Subscribe creates a buffered subscription using a non-nil context. Any existing or pending
+// subscription for this topic returns ErrAlreadySubscribedToTopic. Cancel the context or call
+// Unsubscribe to close it; slow consumers can lose messages.
 func (c *cmdTopic) Subscribe(ctx context.Context, key RedisKey, keyAppend ...any) (<-chan *redis.Message, error) {
 	messages, _, err := c.subscribe(ctx, key, false, keyAppend...)
 	return messages, err
 }
 
-// SubscribeRepeat 重复订阅同一个 topic，并返回独立的本地消息通道和取消函数。
-//
-// 同一 topic 的所有重复订阅共享一个底层 Redis PubSub 连接，但每个调用方都会收到
-// 独立通道，因此消息不会被多个调用方竞争消费。取消函数只取消本次调用创建的订阅，
-// 可重复调用；当最后一个本地订阅者取消时，底层 Redis 订阅会一并关闭。
-//
-// 本地通道使用有限缓冲。Redis Pub/Sub 本身是至多一次消息模型；当某个订阅者持续
-// 消费过慢、其缓冲区已满时，新的消息会仅对该订阅者丢弃，避免阻塞其他订阅者。
+// SubscribeRepeat creates an independent 100-message channel sharing the topic transport. The non-nil
+// context or returned idempotent cancel function removes only this subscriber; the last one closes the
+// transport. Full buffers drop new events. Message pointers are shared across subscribers and must be
+// treated as read-only.
 func (c *cmdTopic) SubscribeRepeat(ctx context.Context, key RedisKey, keyAppend ...any) (<-chan *redis.Message, func(), error) {
 	return c.subscribe(ctx, key, true, keyAppend...)
 }
@@ -124,6 +124,7 @@ func (c *cmdTopic) subscribe(ctx context.Context, key RedisKey, allowRepeat bool
 		}
 
 		c.pubSubsMutex.Lock()
+		// Do not publish a transport created before global subscription cleanup.
 		if generation != c.generation {
 			c.pubSubsMutex.Unlock()
 			_ = pubSub.Close()
@@ -176,7 +177,10 @@ func (c *cmdTopic) watchSubscriberContext(ctx context.Context, key string, subsc
 	}()
 }
 
-// SubscribeRetry 订阅消息（重试连接）
+// SubscribeRetry asynchronously subscribes and resubscribes until a non-nil context is canceled. A nil
+// handler is a no-op; subscribe failures wait five seconds before retrying. The handler runs
+// synchronously without panic recovery, so keep it short and handle failures. Messages can be lost and
+// are not replayed; this method has no per-attempt error return.
 func (c *cmdTopic) SubscribeRetry(ctx context.Context, topicKey RedisKey, handle func(*redis.Message)) {
 	if handle == nil {
 		return
@@ -190,7 +194,6 @@ func (c *cmdTopic) SubscribeRetry(ctx context.Context, topicKey RedisKey, handle
 			}
 			ch, cancel, err := c.SubscribeRepeat(ctx, topicKey)
 			if err != nil {
-				// 订阅失败，等待重试
 				select {
 				case <-ctx.Done():
 					return
@@ -206,8 +209,9 @@ func (c *cmdTopic) SubscribeRetry(ctx context.Context, topicKey RedisKey, handle
 	}()
 }
 
-// Unsubscribe 取消一个 topic 的全部本地订阅并释放底层 Redis 连接。
-// 若只需要取消 SubscribeRepeat 创建的某一个订阅，请调用其返回的取消函数。
+// Unsubscribe removes all local subscribers and closes the topic transport using a background context.
+// Missing topics return ErrNotSubscribedToTopic; use SubscribeRepeat cancellation for one subscriber
+// only.
 func (c *cmdTopic) Unsubscribe(key RedisKey, keyAppend ...any) error {
 	keyString := key.RawKeyString(keyAppend...)
 	subscription, subscribers := c.detachSubscription(keyString, nil)
@@ -340,6 +344,7 @@ func (s *topicSubscriber) deliver(message *redis.Message) {
 	select {
 	case s.messages <- message:
 	default:
+		// Drop for this slow subscriber instead of blocking fan-out to others.
 	}
 }
 

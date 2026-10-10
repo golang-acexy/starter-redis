@@ -12,6 +12,9 @@ type cmdHash struct {
 
 var hashCmd = new(cmdHash)
 
+// HashCmd returns shared hash helpers. Calls require a running starter and can panic otherwise;
+// concurrent calls need stable inputs. Commands use background contexts. Positive-expiry writes
+// use a Lua script, preserve existing expiration, and return script errors.
 func HashCmd() *cmdHash {
 	return hashCmd
 }
@@ -21,14 +24,12 @@ func hSet(key RedisKey, value []any, keyAppend ...any) error {
 		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
+	if key.Expire > 0 {
+		return writeWithInitialExpiry("HSET", originKey, key.Expire, value)
+	}
 	cmd := rawRedisClient().HSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
-	}
-	if key.Expire > 0 {
-		if keyCmd.Ttl(key, keyAppend...) < 0 {
-			keyCmd.Expire(key, key.Expire, keyAppend...)
-		}
 	}
 	return nil
 }
@@ -38,14 +39,12 @@ func hMSet(key RedisKey, value []any, keyAppend ...any) error {
 		return ErrNilValue
 	}
 	originKey := key.RawKeyString(keyAppend...)
+	if key.Expire > 0 {
+		return writeWithInitialExpiry("HMSET", originKey, key.Expire, value)
+	}
 	cmd := rawRedisClient().HMSet(context.Background(), originKey, value)
 	if cmd.Err() != nil {
 		return cmd.Err()
-	}
-	if key.Expire > 0 {
-		if keyCmd.Ttl(key, keyAppend...) < 0 {
-			keyCmd.Expire(key, key.Expire, keyAppend...)
-		}
 	}
 	return nil
 }
@@ -62,17 +61,20 @@ func hGetAll(key RedisKey, keyAppend ...any) *redis.MapStringStringCmd {
 	return rawRedisClient().HGetAll(context.Background(), key.RawKeyString(keyAppend...))
 }
 
-// HExists 判断Hash类型是否存在key
+// HExists reports field existence; false can also reflect a suppressed driver error.
 func (*cmdHash) HExists(key RedisKey, name string, keyAppend ...any) bool {
 	return rawRedisClient().HExists(context.Background(), key.RawKeyString(keyAppend...), name).Val()
 }
 
-// HSet 设置Hash类型的值
+// HSet writes one text field. Positive key.Expire is installed only if the key has no expiration,
+// atomically with the write using Lua. Existing expiry is preserved; script errors are returned.
+// Lua errors do not roll back a write already executed. Expiry uses whole seconds, with a one-second minimum.
 func (*cmdHash) HSet(key RedisKey, name, value string, keyAppend ...any) error {
 	return hSet(key, []any{name, value}, keyAppend...)
 }
 
-// HSetAny 设置Hash类型的值 任何值类型
+// HSetAny Gob-encodes and writes one field with HSet expiration behavior; encoding and data-write errors
+// are returned.
 func (*cmdHash) HSetAny(key RedisKey, name string, value any, keyAppend ...any) error {
 	encode, err := gob.Encode(value)
 	if err != nil {
@@ -81,7 +83,8 @@ func (*cmdHash) HSetAny(key RedisKey, name string, value any, keyAppend ...any) 
 	return hSet(key, []any{name, encode}, keyAppend...)
 }
 
-// HGetAny 获取Hash指定key值 任何值类型
+// HGetAny Gob-decodes one field into a non-nil destination pointer; it preserves redis.Nil and decoding
+// errors.
 func (*cmdHash) HGetAny(key RedisKey, name string, result any, keyAppend ...any) error {
 	cmd := hGet(key, name, keyAppend...)
 	if cmd.Err() != nil {
@@ -94,7 +97,8 @@ func (*cmdHash) HGetAny(key RedisKey, name string, result any, keyAppend ...any)
 	return gob.Decode(bytes, result)
 }
 
-// HMSet 一次性设置多个Hash类型的值
+// HMSet writes text fields; nil or empty data returns ErrNilValue. Positive-expiry writes use the
+// same atomic, non-refreshing expiration policy and error handling as HSet.
 func (*cmdHash) HMSet(key RedisKey, data map[string]string, keyAppend ...any) error {
 	array := make([]any, len(data)*2)
 	index := 0
@@ -107,7 +111,8 @@ func (*cmdHash) HMSet(key RedisKey, data map[string]string, keyAppend ...any) er
 	return hMSet(key, array, keyAppend...)
 }
 
-// HMSetAny 一次性设置多个Hash类型的值 任意值类型
+// HMSetAny Gob-encodes all fields before the write; nil or empty data returns ErrNilValue.
+// Expiration follows HMSet, and encoding or script errors are returned.
 func (*cmdHash) HMSetAny(key RedisKey, data map[string]any, keyAppend ...any) error {
 	array := make([]any, len(data)*2)
 	index := 0
@@ -124,7 +129,7 @@ func (*cmdHash) HMSetAny(key RedisKey, data map[string]any, keyAppend ...any) er
 	return hMSet(key, array, keyAppend...)
 }
 
-// HGet 获取Hash指定key值
+// HGet reads one field and preserves redis.Nil for absence.
 func (*cmdHash) HGet(key RedisKey, name string, keyAppend ...any) (string, error) {
 	cmd := hGet(key, name, keyAppend...)
 	if err := cmd.Err(); err != nil {
@@ -133,7 +138,8 @@ func (*cmdHash) HGet(key RedisKey, name string, keyAppend ...any) (string, error
 	return cmd.Val(), nil
 }
 
-// HMGet 一次性获取多个hash指定key值
+// HMGet reads fields in names order; absent values become empty strings. Empty names are passed to Redis
+// and may cause a command error.
 func (*cmdHash) HMGet(key RedisKey, names []string, keyAppend ...any) ([]string, error) {
 	cmd := hMGet(key, names, keyAppend...)
 	if err := cmd.Err(); err != nil {
@@ -156,7 +162,7 @@ func (*cmdHash) HMGet(key RedisKey, names []string, keyAppend ...any) ([]string,
 	return m, nil
 }
 
-// HGetAll 获取指定key中所有数据
+// HGetAll returns all fields; an absent key yields an empty result and driver errors are returned.
 func (*cmdHash) HGetAll(key RedisKey, keyAppend ...any) (map[string]string, error) {
 	cmd := hGetAll(key, keyAppend...)
 	if err := cmd.Err(); err != nil {
