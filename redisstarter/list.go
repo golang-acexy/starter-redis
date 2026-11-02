@@ -39,11 +39,16 @@ func (*cmdList) Push(directionRight bool, key RedisKey, data string, keyAppend .
 }
 
 // BPop starts an unbuffered pop stream using a non-nil context. True pops right, false pops left; zero
-// timeout asks Redis to block indefinitely. Errors are logged and retried, with a five-second delay
-// after non-timeout failures. Drain the stream or cancel; in-flight read interruption depends on driver
-// settings. A popped item can be lost if cancellation prevents channel delivery.
+// timeout keeps waiting until canceled or data arrives. For cancellable contexts, zero or longer
+// timeouts use at most one-second server waits to check cancellation between reads; network failures
+// and driver retries can delay exit. Errors are retried with a five-second delay after non-timeout
+// failures. Drain the stream or cancel. A popped item can be lost if cancellation prevents delivery.
 func (*cmdList) BPop(ctx context.Context, directionRight bool, timeout time.Duration, key RedisKey, keyAppend ...any) <-chan string {
 	keyString := key.RawKeyString(keyAppend...)
+	// Bound server waits without changing global driver settings or spawning cancellation workers.
+	if ctx.Done() != nil && (timeout == 0 || timeout > time.Second) {
+		timeout = time.Second
+	}
 	client := rawRedisClient()
 	c := make(chan string)
 	go func() {
@@ -70,6 +75,9 @@ func (*cmdList) BPop(ctx context.Context, directionRight bool, timeout time.Dura
 					data, err = client.BRPop(ctx, timeout, keyString).Result()
 				} else {
 					data, err = client.BLPop(ctx, timeout, keyString).Result()
+				}
+				if ctx.Err() != nil {
+					return
 				}
 				if err == nil && len(data) > 1 {
 					select {

@@ -81,6 +81,8 @@ if err := redisstarter.StringCmd().Set(key, profileJSON, userID); err != nil {
 value, err := redisstarter.StringCmd().Get(key, userID)
 ```
 
+`ListCmd().BPop` returns an unbuffered stream. Use a cancellable context and keep consuming, or cancel when finished. With a cancellable context, zero or long timeouts use one-second server waits so cancellation is checked regularly; empty waits do not close the stream. Network failures and driver retries can delay shutdown. Cancellation after a pop may lose that item; this is not an acknowledged queue.
+
 ## Pub/Sub
 
 `TopicCmd` manages subscriptions using the shared Redis client. Define stable topic keys and ensure the starter remains active for the complete subscription lifetime. Parent-managed shutdown closes registered subscriptions before closing the client. `SubscribeRepeat` gives each caller a separate channel and cancellation function. Slow consumers can lose events; received message pointers are shared and should be treated as read-only. Retry subscriptions do not replay missed messages.
