@@ -61,7 +61,7 @@ func mget(keys ...string) (*redis.SliceCmd, error) {
 // Set stores text using key.Expire; zero writes without expiration and redis.KeepTTL retains an existing
 // TTL. Empty text is allowed and driver errors are returned.
 func (*cmdString) Set(key RedisKey, value string, keyAppend ...any) error {
-	return set(key, []byte(value), keyAppend...)
+	return set(key, value, keyAppend...)
 }
 
 // SetBytes stores bytes using key.Expire; a typed nil byte slice is passed to the driver. Do not mutate
